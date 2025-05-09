@@ -1,4 +1,4 @@
-winTitlePrefix = 'BigKeeper_20240922'
+winTitlePrefix = 'BigKeeper_20250509'
 
 from inspect import currentframe
 def println(inContent = '-'):
@@ -293,6 +293,8 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         self.pushButton_launchHoudini1.setText(self.envRead('HOUDINI', 'label'))
 
 
+        self.pushButton_LaunchMayaLegacySelection.clicked.connect(self.launchMayaLegacySelection)
+        self.pushButton_mayaOther.setText(self.envRead('MAYA', 'Legacy\nSelDisplay'))
         self.pushButton_mayaOther.clicked.connect(self.launchStudioEnvMayaFolder)
         self.pushButton_mayaOther.setText(self.envRead('MAYA', 'batFolderPathLabel'))
         self.pushButton_nukeOther.clicked.connect(self.launchStudioEnvNukeFolder)
@@ -849,6 +851,11 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         println(theCmd)
         os.system(theCmd)
 
+    def launchMayaLegacySelection(self):
+        theCmd = 'start {}'.format(os.path.join(self.envRead('MAYA', 'batPath'), 'studioEnv_LegacySelDisplay.bat'))
+        println(theCmd)
+        os.system(theCmd)
+
     def launchStudioEnvMayaFolder(self):
         theCmd = self.envRead('MAYA', 'batFolderPath')
         os.startfile(theCmd)
@@ -1243,14 +1250,42 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
                 if nuke.Root().modified() == False:
                     self.printEcho(os.path.join(bigKInfo.currentPath(), item.text()))
                     nuke.scriptOpen(os.path.join(bigKInfo.currentPath(), item.text()))
-                    nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
+
+                    try:
+                        nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
+                    except:
+                        self.printEcho('PASS "nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())"')
+                        pass
+
+                    try:
+                        #disabled this upon Apple and Sally request for a heavy shot.
+                        nuke.onScriptLoad(self.launchSceneUpdate())
+                        #QMessageBox.information(self, 'Auto Scene Update', 'Check if Scene Update is needed ?')
+                    except:
+                        self.printEcho('PASS "nuke.onScriptLoad(self.launchSceneUpdate())"')
+                        pass
+
                     self.activateCurrentTab()
 
             else:
                 nuke.scriptClose()
                 self.printEcho(os.path.join(bigKInfo.currentPath(), item.text()))
                 nuke.scriptOpen(os.path.join(bigKInfo.currentPath(), item.text()))
-                nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
+
+                try:
+                    nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
+                except:
+                    self.printEcho('PASS "nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())"')
+                    pass
+
+                try:
+                    #disabled this upon Apple and Sally request for a heavy shot.
+                    nuke.onScriptLoad(self.launchSceneUpdate())
+                    #QMessageBox.information(self, 'Auto Scene Update', 'Check if Scene Update is needed ?')
+                except:
+                    self.printEcho('PASS "nuke.onScriptLoad(self.launchSceneUpdate())"')
+                    pass
+
                 self.activateCurrentTab()
 
 
@@ -2565,6 +2600,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
                 if inType == 'CompMaster':
                     self.printEcho(inType)
 
+                    answerName = inType
                     answerSuffix, readyToCreate = QInputDialog.getText(self, 'Suffix', 'Suffix : (empty if not needed.)', QLineEdit.Normal, bigKInfo.currentCompIniSuffix())
                     frameName = str(bigKInfo.currentShot()) + answerSuffix + '.%04d' + '.exr'
                     verFolder = 'v' + str(bigKInfo.currentThisWipVerNum()).zfill(4)
@@ -2577,6 +2613,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
                 elif inType == 'CompMasterToV':
                     self.printEcho(inType)
 
+                    answerName = inType
                     answerSuffix, readyToCreate = QInputDialog.getText(self, 'Suffix', 'Suffix : (empty if not needed.)', QLineEdit.Normal, bigKInfo.currentCompIniSuffix())
                     frameName = str(bigKInfo.currentShot()) + answerSuffix + '.%04d' + '.exr'
                     vDriveFolder = self.vDrivePathRead(os.path.join(bigKInfo.currentProjWorkPath(), 'bigPathsProject.ini'), 'BIGPATHS', 'vOutput')
@@ -2639,7 +2676,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
                     if readyToCreate :
                         #newCreatedNodeMetadata = self.nukeBornBigKNode('bigK', 'ModifyMetaData')
                         newCreatedNodeMetadata = self.nukeBornMetadataNode()
-                        newCreatedNode = self.nukeBornBigKNode('bigK', 'Write')
+                        newCreatedNode = self.nukeBornBigKNode('bigK' +  '_' + answerName, 'Write')
                         newCreatedNode.setInput(0, newCreatedNodeMetadata)
                         newCreatedNode.knob('channels').setValue('rgba')
 
@@ -2727,7 +2764,8 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         self.printEcho('1 ' + newPrefix)
         self.printEcho(allExistBackdropsNames)
         self.printEcho('2 ' + newPrefix)
-        while newPrefix in allExistBackdropsNames and loopcounter < 20:
+        #while newPrefix in allExistBackdropsNames and loopcounter < 20:
+        while newPrefix in allExistBackdropsNames and loopcounter < len(allExistBackdropsNames):
             existedSameBackdropNameCounter += 1
             newPrefix = inPrefix + str(existedSameBackdropNameCounter)
             loopcounter += 1
@@ -3239,7 +3277,9 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
             # Cancel the above procedure of sorting out Disable Write Node. After discuss with Apple and Lik.
             mergePrefix = dedictatedPrefix + '_' + nodeClassName + '_'
-            if i.name()[0:len(mergePrefix)] == mergePrefix:
+            #if i.name()[0:len(mergePrefix)] == dedictatedPrefix:
+
+            if i.name()[0:len(dedictatedPrefix)] == dedictatedPrefix and i.Class() == 'Write':
                 sameNodeNameList.append(i.name())
                 #create a list containing "node" instead of nodeName, for coding convinient
                 allFilteredNodes.append(nuke.toNode(i.name()))
@@ -3420,7 +3460,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
                         totalSize = 0
 
-                        self.printEcho()
+                        print()
 
 
 
@@ -3439,14 +3479,14 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
                             msg = 'Path : ' + str(i) + '     Size in MB : ' + str(size/1024/1024)
                             msgBox.setText(msg)
 
-                        self.printEcho()
+                        print()
                         '''println('toBeDelList is :')
                         println(toBeDelList)
                         for i in toBeDelList:
                             println(i)
                         '''
 
-                        self.printEcho()
+                        print()
                         self.printEcho('Keeping %d Latest Vers ---OR--- verions within %d Latest Days (%s)' %(keepVers, keepDays, str(boundryDate)))
                         self.printEcho('totalSize is :')
                         self.printEcho('totalSize in MB (to be deleted) : ' + str(totalSize/1024/1024))

@@ -1,3 +1,5 @@
+echo *** just run this after ReleaseVersion is ready. ***
+
 copy "N:\bpPipeline\bigKeeperPy\repo_09Release\bigKeeperTest_publish.py" "bigKeeperTest_standalone.py"
 copy bigKeeperTest_standalone.py ..\
 
