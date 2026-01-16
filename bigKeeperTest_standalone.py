@@ -1,5 +1,6 @@
-winTitlePrefix = 'BigKeeper_20250509'
+winTitlePrefix = 'BigKeeper_20250810a - For Release'
 
+# To print-message by with line number
 from inspect import currentframe
 def println(inContent = '-'):
     print('{} : {}'.format(currentframe().f_back.f_lineno, inContent))
@@ -10,7 +11,7 @@ println('PYTHON version : {}'.format(sys.version))
 # path of bigKeeperTest_publish : N:\BigKeeper
 # WIP of bigKeeperTest_publish : I:\iCloud~com~omz-software~Pythonista3\pySide2UI\wip
 
-# To import QT modules
+# To import PySide2 QT modules
 from PySide2.QtWidgets import *
 from PySide2.QtCore import *
 from PySide2.QtGui import *
@@ -31,8 +32,8 @@ import xml.etree.ElementTree as ET
 
 # To determine current software environment at
 sys.path.append(r'N:\bpPipeline\bigKeeperPy\py\BigKeeperGlob\wip\published')
-import bigCodingAssistant_publish
-CurrentSoftwareName = bigCodingAssistant_publish.tool().bigCheckSoftware()
+import bigCodingAssistant_published
+CurrentSoftwareName = bigCodingAssistant_published.tool().bigCheckSoftware()
 
 println('PYTHON version : {}'.format(sys.version))
 
@@ -103,17 +104,21 @@ import bigKeeperInfoGlobal_published
 
 
 sys.path.append(uiPath)
-import bigKeeperPyUi_newLayout as UiPy
-sys.path.remove(uiPath)
-
 sys.path.append(r'N:\bpPipeline\bigKeeperPy\py\pySide2UI\ui')
+
+# For PySide2 UI
+import bigKeeperPyUi_newLayout as UiPy
+import childMenu as UiPyChild # path : N:\BigKeeper         WIP : N:\BigKeeper\py\pySide2UI\ui
 import listView_dev as UiList
+import listViewB as UiListB
 import DialogWindow as UiDialog # path : N:\BigKeeper\py\pySide2UI\ui        WIP : I:\iCloud~com~omz-software~Pythonista3\pySide2UI\ui
 import doneWindow as UiDone
 import nukeReadNodeFrameInOut as UiNukeTemp
 import newTaskWindow as UiNewTask
 import presetWindow as UiPreset
+
 sys.path.remove(r'N:\bpPipeline\bigKeeperPy\py\pySide2UI\ui')
+sys.path.remove(uiPath)
 
 sys.path.append(r'N:\bpPipeline\bigKeeperPy\py\externalPyModule')
 
@@ -136,9 +141,9 @@ if not os.path.isdir(bigKeeperCacheFolderPath):
     os.mkdir(bigKeeperCacheFolderPath)
 println(os.path.isdir(bigKeeperCacheFolderPath))
 
-##println('line98')
+
 if CurrentSoftwareName == 'nuke':
-    ##println('line100')
+
     in_nuke = True
     import nuke
     import nukescripts
@@ -380,7 +385,10 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         self.pushButton_newShotBatch.setEnabled(False)
 
 
-        self.pushButton_scnUpdate.clicked.connect(self.launchSceneUpdate)
+        self.pushButton_scnUpdate.clicked.connect(self.openSceneUpdate)
+        self.pushButton_scnUpdate.setText('Scene Update NEW')
+        self.pushButton_scnUpdate_2.clicked.connect(self.launchSceneUpdate)
+        self.pushButton_scnUpdate_2.setText('Scene Update OLD')
 
         self.reviveUi = subListView(parent = self)
         self.reviveUi.listWidget.itemDoubleClicked.connect(self.reviveOpenAction)
@@ -390,6 +398,11 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         self.pushButton_revive.setStyleSheet("background-color:rgb(128,179,179); color:rgb(10, 10, 10)")
         self.pushButton_revive.setEnabled(True)
         self.pushButton_closeNukeScript.clicked.connect(self.pretendCloseNukeScript)
+
+        self.sceneUpdateUi = SceneUpDateListView(parent = self)
+        #self.sceneUpdateUi.listWidget.itemDoubleClicked.connect(self.sceneUpdateAction)
+        #self.sceneUpdateUi.pushButton_exec.clicked.connect(self.sceneUpdateAllAction())
+        self.sceneUpdateUi.setWindowTitle('Scene Update Dialog')
 
         self.pushButton_getFrameRange.clicked.connect(self.getCurrentFrameInfo)
         self.pushButton_getFrameRange.setStyleSheet("background-color:rgb(128,179,179); color:rgb(10, 10, 10)")
@@ -654,9 +667,10 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         self.pushButton_num5.setText('Scn Update')
         self.pushButton_num6.clicked.connect(lambda: self.nukeUpdateReadNodeVer())
         self.pushButton_num6.setText('UpReadVer')
-        self.pushButton_num9.clicked.connect(lambda: self.cleanUpDelAction())
-        self.pushButton_num9.setText('cleanUpDelAction')
+
         '''
+        self.pushButton_num9.clicked.connect(lambda: self.openSceneUpdate())
+        self.pushButton_num9.setText('open ScnUpdate')
 
         self.pushButton_num8.clicked.connect(lambda: self.cleanUpDelAction('moveAction'))
         self.pushButton_num8.setText('moveAction')
@@ -942,14 +956,14 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
     def openTeam11Folder(self):
         println('\ndef >>>>> openTeam11Folder')
         thePath = r'N:\mnt\job\21044ChongFilm\Doc\Schedule\_publishPDF\team11'
-        theLastPath = bigCodingAssistant_publish.tool.findLatestFolderVer(thePath)
+        theLastPath = bigCodingAssistant_published.tool.findLatestFolderVer(thePath)
         println(theLastPath)
         os.startfile(os.path.join(thePath, theLastPath))
 
     def openTeam12Folder(self):
         println('\ndef >>>>> openTeam12Folder')
         thePath = r'N:\mnt\job\21044ChongFilm\Doc\Schedule\_publishPDF\team12'
-        theLastPath = bigCodingAssistant_publish.tool.findLatestFolderVer(thePath)
+        theLastPath = bigCodingAssistant_published.tool.findLatestFolderVer(thePath)
         println(theLastPath)
         os.startfile(os.path.join(thePath, theLastPath))
 
@@ -1013,6 +1027,9 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.selProjRootPath = os.path.normpath(os.path.join(splitDrive, os.path.sep, splitTail[1], splitTail[2], splitTail[3]))
             self.printEcho('self.selProjRootPath : {}'.format(self.selProjRootPath))
 
+            self.listWidget_3.clear()
+            self.listWidget_2.clear()
+            self.listWidget_1.clear()
 
             self.printEcho('self.subDict[self.selProjName]:' + self.subDict[self.selProjName]) # eg. kfcPoke
             self.printEcho('self.subDict[self.selProjPath]:' + self.subDict[self.selProjPath]) # eg. N:/mnt/job/19005kfcPoke/WorkingFile/kfcPoke/
@@ -1021,6 +1038,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.printEcho('self.subDict[self.selProjWipCode]:' + self.subDict[self.selProjWipCode]) # eg. wip
             self.printEcho('self.subDict[self.selProjPublishCode]:' + self.subDict[self.selProjPublishCode]) # eg. published
             folderList = os.listdir(self.selProjScnPath)
+
             listSeq = []
             for i in folderList:
                 if os.path.isdir(os.path.join(self.selProjScnPath, i)):
@@ -1030,9 +1048,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.printEcho(listSeq) # eg. ['animaticSeq', 'balloonSeq', 'edits', 'socialSeq', 'testSeq', 'turnTableSeq', 'tvcSeq']
             self.list1Entries = []
             self.list1Entries = listSeq
-            self.listWidget_3.clear()
-            self.listWidget_2.clear()
-            self.listWidget_1.clear()
+
             self.listWidget_1.addItems(self.list1Entries)
             self.locationPath = self.subDict[self.selProjPath]
             self.lineEdit_Location.setText(self.locationPath)
@@ -1205,7 +1221,8 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
                     #if noNeedSceneUpdateToken:
                     try:
                         #disabled this upon Apple and Sally request for a heavy shot.
-                        nuke.onScriptLoad(self.launchSceneUpdate())
+                        #nuke.onScriptLoad(self.launchSceneUpdate())
+                        nuke.onScriptLoad(self.openSceneUpdate())
                         #QMessageBox.information(self, 'Auto Scene Update', 'Check if Scene Update is needed ?')
                     except:
                         self.printEcho('PASS "nuke.onScriptLoad(self.launchSceneUpdate())"')
@@ -1225,6 +1242,934 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
                 #window.close()
 
         self.updateCurrentOpeningLocationPath()
+
+
+    def openSceneUpdate(self):
+        println('\ndef >>>>> openSceneUpdate')
+
+        def initializeUi():
+            self.sceneUpdateUi.pushButton_exec_1.setText('Update All')
+            self.sceneUpdateUi.pushButton_exec_1.clicked.connect(updateAllAction)
+
+            self.sceneUpdateUi.pushButton_exec_2.setText('Update Selected')
+            self.sceneUpdateUi.pushButton_exec_2.clicked.connect(updateSelectedAction)
+
+            self.sceneUpdateUi.pushButton_exec_3.setText('Select All')
+            self.sceneUpdateUi.pushButton_exec_3.clicked.connect(lambda: selectDeselectAllAction('selectAll'))
+
+            self.sceneUpdateUi.pushButton_exec_4.setText('De-select All')
+            self.sceneUpdateUi.pushButton_exec_4.clicked.connect(lambda: selectDeselectAllAction('deSelectAll'))
+
+            self.sceneUpdateUi.pushButton_exec_5.setText('Toggle All')
+            self.sceneUpdateUi.pushButton_exec_5.clicked.connect(toggleAllAction)
+
+            self.sceneUpdateUi.checkBox_1.setText('Out Dated')
+            self.sceneUpdateUi.checkBox_1.setChecked(True)
+            self.sceneUpdateUi.checkBox_1.stateChanged.connect(apply_filter)
+
+            self.sceneUpdateUi.checkBox_2.setText('Up-To-Date')
+            self.sceneUpdateUi.checkBox_2.setChecked(False)
+            self.sceneUpdateUi.checkBox_2.stateChanged.connect(apply_filter)
+
+            self.sceneUpdateUi.listWidget.itemClicked.connect(itemClickedAction)
+            #self.sceneUpdateUi.listWidget.itemDoubleClicked.connect(itemDoublClickedAction)
+
+
+            self.sceneUpdateUi.pushButton_exec_1.setVisible(False)
+            self.sceneUpdateUi.pushButton_exec_5.setVisible(False)
+
+            self.sceneUpdateUi.TextLabel_2.setText('Click ::: Zoom to the node\n< Explore > Button ::: Open footage folder in explorer.\n\n ')
+            self.sceneUpdateUi.TextLabel_3.setText('Color Code\nRed    ::: Out Dated\nGreen ::: Up-to-date\nBlue    ::: Freeze\n')
+            self.sceneUpdateUi.lineEdit.setText('--- click on the above row to show the path here ---')
+
+            self.sceneUpdateUi.pushButton.clicked.connect(openClickedItemLocationPath)
+            self.sceneUpdateUi.pushButton.setText('explore...')
+
+            self.sceneUpdateUi.pushButton_exec_6.clicked.connect(refreshSceneUpdateUI)
+            self.sceneUpdateUi.pushButton_exec_6.setText('refresh')
+
+
+            filterUiFontObject = QFont()
+            filterUiFontObject.setBold(True)
+
+        def refreshSceneUpdateUI():
+            self.printEcho('\ndef >>>>> refreshSceneUpdateUI')
+            self.sceneUpdateUi.close()
+            self.openSceneUpdate()
+
+        def updateAllAction():
+            self.printEcho(self.sceneUpdateUi.listWidget.count())
+
+        def updateSelectedAction():
+            selectedItem = []
+            itemsToBeTakenAway = []
+            for i in range(self.sceneUpdateUi.listWidget.count()):
+                listedEachItem = self.sceneUpdateUi.listWidget.item(i)
+                if listedEachItem.checkState() == Qt.Checked:
+
+                    currentNodeName     = self.sceneUpdateUi.listWidget.item(i).data(role1Nodename)
+                    currentLongwithTail = self.sceneUpdateUi.listWidget.item(i).data(role3CurrentLongWithTail)
+                    newLongwithTail     = self.sceneUpdateUi.listWidget.item(i).data(role5LatestLongWithTail)
+                    self.printEcho(currentNodeName)
+                    self.printEcho(currentLongwithTail)
+                    self.printEcho(newLongwithTail)
+
+
+                    if perSelectedAction(currentNodeName, currentLongwithTail, newLongwithTail):
+                        itemsToBeTakenAway.append(i)
+
+            print('{} Nodes updated.'.format(len(itemsToBeTakenAway)))
+
+            for j in sorted(itemsToBeTakenAway, reverse=True):
+                print(j)
+                #self.sceneUpdateUi.listWidget.takeItem(j)
+                self.sceneUpdateUi.listWidget.item(j).setData(roleStatus, "up-to-date")
+                self.sceneUpdateUi.listWidget.item(j).setData(role2CurrentBasename, self.sceneUpdateUi.listWidget.item(j).data(role4LatestBasename))
+                self.sceneUpdateUi.listWidget.item(j).setData(role3CurrentLongWithTail, self.sceneUpdateUi.listWidget.item(j).data(role5LatestLongWithTail))
+            print('{} Row of listwidget removed.'.format(len(itemsToBeTakenAway)))
+
+            apply_filter()
+
+
+            #self.printEcho(selectedItem)
+
+
+        def perSelectedAction(inNodeName, inCurrent, inNew):
+            # Final Original file path
+            theNode = nuke.toNode(inNodeName)
+            theNodeName = theNode.knob('name').value()
+            theNodeFilepath = theNode.knob('file').value()
+
+            self.printEcho('perSelectedAction :')
+            self.printEcho(inNodeName)
+            self.printEcho(theNodeFilepath)
+            self.printEcho(inCurrent)
+            self.printEcho(inNew)
+
+            updatedContent = theNodeFilepath.replace(inCurrent, inNew)
+            theNode.knob('file').setValue(updatedContent)
+
+            if theNode.knob('file').value() == updatedContent:
+                self.printEcho('checked, < {} > is updated.'.format(inNodeName))
+                return True
+            else:
+                self.printEcho('*** check fail, < {} > update F A I L ! ! ! ***'.format(inNodeName))
+                return False
+
+
+        def selectDeselectAllAction(inMode):
+            for i in range(self.sceneUpdateUi.listWidget.count()):
+                listedEachItem = self.sceneUpdateUi.listWidget.item(i)
+                if inMode == 'selectAll':
+                    if listedEachItem.flags() & Qt.ItemIsUserCheckable:
+                        listedEachItem.setCheckState(Qt.Checked)
+                elif inMode == 'deSelectAll':
+                    listedEachItem.setCheckState(Qt.Unchecked)
+        '''
+        def deSelectAllAction():
+            for i in range(self.sceneUpdateUi.listWidget.count()):
+                listedEachItem = self.sceneUpdateUi.listWidget.item(i)
+                listedEachItem.setCheckState(Qt.Unchecked)
+        '''
+
+        def toggleAllAction():
+            for i in range(self.sceneUpdateUi.listWidget.count()):
+                listedEachItem = self.sceneUpdateUi.listWidget.item(i)
+                if listedEachItem.data(roleStatus) != "separatorItem":
+                    if listedEachItem.checkState() == Qt.Checked:
+                        listedEachItem.setCheckState(Qt.Unchecked)
+                    else:
+                        listedEachItem.setCheckState(Qt.Checked)
+
+        def itemClickedAction(inItem):
+            self.printEcho('inItem : {}'.format(inItem))
+            self.printEcho('inItem.text() Clicked               : {}'.format(inItem.text()))
+            self.printEcho('value in roleStatus                 : {}'.format(inItem.data(roleStatus)))
+            self.printEcho('value in role1Nodename              : {}'.format(inItem.data(role1Nodename)))
+            self.printEcho('value in role2CurrentBasename       : {}'.format(inItem.data(role2CurrentBasename)))
+            self.printEcho('value in role3CurrentLongWithTail   : {}'.format(inItem.data(role3CurrentLongWithTail)))
+            self.printEcho('value in role4LatestBasename        : {}'.format(inItem.data(role4LatestBasename)))
+            self.printEcho('value in role5LatestLongWithTail    : {}'.format(inItem.data(role5LatestLongWithTail)))
+            self.printEcho('value in role6NodeClass             : {}'.format(inItem.data(role6NodeClass)))
+            self.printEcho('value in role7NodeIsNotFreeze       : {}'.format(inItem.data(role7NodeIsNotFreeze)))
+            self.printEcho('value in role11DisplayText          : {}'.format(inItem.data(role11DisplayText)))
+
+            # To unselect nodes, yet to find "select nothing" function
+            nuke.selectAll()
+            nuke.invertSelection()
+
+            theNode = nuke.toNode(inItem.data(role1Nodename))
+            theNode.setSelected(True)
+            # ref: https://learn.foundry.com/nuke/developers/63/pythondevguide/dag.html
+            nuke.zoom( 1, [ theNode.xpos(), theNode.ypos() ])
+
+            splitParts = str(inItem.data(role3CurrentLongWithTail)).split(inItem.data(role2CurrentBasename))
+            self.sceneUpdateUi.lineEdit.setText(splitParts[0])
+
+
+        def itemDoublClickedAction(inItem):
+                print(inItem.data(role3CurrentLongWithTail))
+                print(inItem.data(role2CurrentBasename))
+                splitParts = str(inItem.data(role3CurrentLongWithTail)).split(inItem.data(role2CurrentBasename))
+                print(splitParts)
+
+                os.startfile(splitParts[0])
+
+        def openClickedItemLocationPath():
+                os.startfile(self.sceneUpdateUi.lineEdit.text())
+
+
+        def findNodeWithFileKnob():
+            """
+            Finds all nodes in the Nuke script that are of a specified type :
+                 (include: Read, DeepRead, AudioRead /
+                  exclude: ReadGeo, Camera)
+            and prints their name and the value of their 'file' knob.
+            """
+            # 1. A tuple to store the target node classes.
+            # Using a tuple for performance as it's immutable.
+            # do not include node type because it collapse when update without open Nuke script: 'Camera3', ''ReadGeo2', 'Axis3', 'Axis4', 'Light3')
+            target_node_classes = ('Read', 'DeepRead', 'AudioRead')
+
+            # 2. Find all nodes in the script, including those inside groups.
+            all_nodes = nuke.allNodes(recurseGroups=True)
+
+            self.printEcho("--- Finding ('Read', 'DeepRead', 'AudioRead') Node Classes ---")
+
+            # A counter for found nodes.
+            found_nodes_count = 0
+
+            # A list storing the node names with 'file' knob
+            storeNodeNamesList = []
+
+            # 3. Iterate through all nodes and filter for the target classes.
+            for node in all_nodes:
+                if node.Class() in target_node_classes:
+                    try:
+                        # 4. Get the node name and the value of the 'file' knob.
+                        node_name = node.name()
+                        file_path = node['file'].value()
+
+                        found_nodes_count += 1
+                        storeNodeNamesList.append(node_name)
+                    except NameError:
+                        pass
+
+            if found_nodes_count == 0:
+                self.printEcho("No nodes of the target types were found in the script.")
+            else:
+                self.printEcho(f"\nFound a total of {found_nodes_count} matching nodes.")
+
+            return storeNodeNamesList
+
+        def CheckVerPath(inPath):
+            """
+            This function looks at a file path and finds any folder names that look
+            like version numbers (e.g., "v01", "v10005").
+
+            It checks for two kinds of version folders:
+            1. Folders that start with 'v' and numbers (like "v005_shot_name").
+            2. Folders that end with 'v' and numbers (like "shot_name_v005").
+
+            The function takes one argument:
+              inPath: A string containing the full path to a file.
+
+            It returns:
+              A list of all the unique version strings it found.
+            """
+
+            # Step 1: Create a Path object from the file path string.
+            # A Path object has useful attributes for getting parts of the path.
+            pathObj = pathlib.Path(inPath)
+
+            found_version = None
+            found_version_basename = None
+            found_version_longpath = None
+            found_version_fullpath = None
+            found_version_filename = None
+            found_version_fullparent = None
+
+
+            for path in pathObj.parents:
+                #print()
+                #print('path : {}'.format(path))
+                #print('base name : {}'.format(os.path.basename(path)))
+
+                pathBasename = os.path.basename(path)
+                fullpath = pathObj.parent
+
+                first_v_postion = pathBasename.lower().startswith('v')
+                last_v_position = pathBasename.lower().rfind('v')
+
+                # We only proceed if a 'v' was found (position is not -1)
+                # and it's not the very last character of the folder name.
+                if first_v_postion == False and last_v_position != -1 and last_v_position < len(pathBasename) - 1:
+
+                    # Get the part of the string that comes AFTER the last 'v'.
+                    # This is called a "slice".
+                    suffix = pathBasename[last_v_position + 1:]
+
+                    # Check if this suffix contains ONLY numbers.
+                    if suffix.isdigit():
+                        # If it's all numbers, then the part from 'v' to the end is our version.
+                        version_string = pathBasename[last_v_position:]
+                        found_version = version_string
+                        found_version_basename = pathBasename
+                        found_version_longpath = path
+                        found_version_fullpath = fullpath
+                        # If we found a version pattern, break the for-loop.
+
+                        break # Stop the loop.
+
+                else:
+
+                    if pathBasename.lower().startswith('v'):
+                        self.printEcho('{} - startswith v'.format(pathBasename.lower()))
+                        if len(pathBasename) > 1 and pathBasename[1].isdigit():
+
+                            version_part = 'v'
+                            for character in pathBasename[1:]: # Loop starting from the second character.
+                                if character.isdigit():
+                                    version_part += character
+                                else:
+                                    # If we find a non-number, the version part has ended.
+
+                                    break # Stop the loop.
+
+                            found_version = version_part
+                            found_version_basename = pathBasename
+                            found_version_longpath = path
+                            found_version_fullpath = fullpath
+                            found_version_filename = os.path.basename(fullpath)
+                            found_version_fullparent = os.path.dirname(fullpath)
+
+                            # If we found a version pattern, break the for-loop.
+
+                            break # Stop the loop.
+                    else:
+                        self.printEcho('{} - Not startswith v'.format(pathBasename.lower()))
+
+            return found_version, found_version_basename, found_version_longpath, found_version_fullpath, found_version_filename, found_version_fullparent
+
+        def isNumPadPattern(inString):
+            #self.printEcho('\ndef >>>>> isNumPadPattern')
+            # all number
+            # all @
+            # all #
+            # %04D
+
+            loopToken = True
+            while loopToken == True:
+                # all number
+                if inString.isdigit():
+                    loopToken = False
+                    #print('all number')
+                    break
+                else:
+
+                    #all "@"
+                    if inString.count('@') == len(inString):
+                        loopToken = False
+                        #print('all @')
+                        break
+                    else:
+
+                        #all "#"
+                        if inString.count('#') == len(inString):
+                            loopToken = False
+                            #print('all #')
+                            break
+
+                        else:
+
+                            # %04d, %xxxxd
+                            if inString[0] == '%' and inString[-1] == 'd' and inString[1:-1:1].isdigit():
+                                loopToken = False
+                                inString[1:-1:1]
+                                #print('%04d, %xxxxd')
+                                break
+                            else:
+                                break
+
+
+            loopToken = not loopToken
+
+            return loopToken
+
+        def nameStemPattern(inString):
+            #self.printEcho('\ndef >>>>> nameStemPattern')
+
+            #self.printEcho('inString : {}'.format(inString))
+            splitedString = inString.split('.')
+            splitedString.reverse()
+            outputStringList = []
+            foundIsDigit = False
+            for i in splitedString:
+                #print('check : ' + i)
+                #print(foundIsDigit)
+                #print(isNumPadPattern(i))
+                if foundIsDigit == False:
+                    if isNumPadPattern(i):
+                        foundIsDigit = True
+                    else:
+                        foundIsDigit = False
+                elif foundIsDigit == True:
+
+                    #print( 'APPEND' )
+                    outputStringList.append(i)
+
+
+                #print(outputStringList)
+
+            outputStringList.reverse()
+            outputString = ''
+
+            for i in outputStringList:
+                outputString = outputString + '.' + i
+
+            #print('outputString[1::] >>> {}'.format( outputString[1::]))
+
+            return outputString[1::]
+
+        def isVersionPattern(inString):
+            self.printEcho('\ndef >>>>> isVersionPattern')
+
+            if inString.startswith('v') or inString.startswith('V'):
+                self.printEcho('inString : {} is startswith "v" or "V".'.format(inString))
+                if inString[1::].isdigit:
+                    self.printEcho('inString : {} is startswith "v" or "V" and the rest are isdigit. it is a version pattern.'.format(inString))
+                    returnValue = True
+                else:
+                    self.printEcho('inString : {} is startswith "v" or "V" and the rest are NOT isdigit. NOT version pattern.'.format(inString))
+                    returnValue = False
+            else:
+                self.printEcho('inString : {} is not startswith "v" or "V". NOT version pattern'.format(inString))
+                returnValue = False
+
+            return returnValue
+
+        def versionPatternFrontOrEnd(inStringA, inStringB):
+            self.printEcho('\ndef >>>>> versionPatternFrontOrEnd')
+
+            if inStringA.endswith(inStringB):
+                return 'End'
+            elif inStringA.startswith(inStringB):
+                return 'Front'
+            else:
+                return 'NoMatch'
+
+
+        def isLatestVersion(inNodeName, inVer, inVerBasename, inVerLongpath, inVerFullpath):
+            println('\ndef >>>>> isLatestVersion')
+            println('\n\n\n\n\ninNodeName : {}\ninVer: {}\ninVerBasename : {}\ninVerLongpath : {}\ninVerFullpath : {}\n---'.format(inNodeName, inVer, inVerBasename, inVerLongpath, inVerFullpath))
+
+            ''' Result example:
+            ---
+            inNodeName : Read1
+            inVer: v0006
+            inVerBasename : v0006
+            inVerLongpath : N:\mnt\job\24068PantenePokemon\WorkingFile\PantenePokemon\scenes\zzzToliet\bensonPipelineTest\components\light\images\v0006
+            inVerFullpath : N:\mnt\job\24068PantenePokemon\WorkingFile\PantenePokemon\scenes\zzzToliet\bensonPipelineTest\components\light\images\v0006\pearlA_rlyr\pearlA_rlyr.%04d.exr
+                                                                                                                                                  |---| Ver
+                                                                                                                                                  |---| verBaseName
+                            |-------------------------------------------------------------------------------------------------------------------------| verLongpath
+                            |----------------------------------------------------------------------------------------------------------------------------------------------------------| verFullPath
+            ---
+
+
+            ---
+            inNodeName : Read2
+            inVer: v0008
+            inVerBasename : v0008_LayerMask
+            inVerLongpath : N:\mnt\job\24068PantenePokemon\WorkingFile\PantenePokemon\scenes\zzzToliet\bensonPipelineTest\components\compB\output\v0008_LayerMask
+            inVerFullpath : N:\mnt\job\24068PantenePokemon\WorkingFile\PantenePokemon\scenes\zzzToliet\bensonPipelineTest\components\compB\output\v0008_LayerMask\pearl\five0010_pearl.%04d.exr
+                                                                                                                                                  |---| Ver
+                                                                                                                                                  |-------------| verBaseName
+                            |-----------------------------------------------------------------------------------------------------------------------------------| verLongpath
+                            |----------------------------------------------------------------------------------------------------------------------------------------------------------| verFullPath
+            ---
+
+
+
+
+            '''
+            inVerPathObjLong = pathlib.Path(inVerLongpath)
+            inVerLongpath_tail = inVerFullpath[len(str(inVerLongpath))::]
+            inVerFullpath_name = os.path.basename(inVerFullpath)
+            inVerFullpath_stem = os.path.basename(inVerFullpath).split('.')[0]
+
+
+
+            # use parent path to find all versions
+            listFolders = os.listdir(inVerPathObjLong.parent)
+            listFolders.sort()
+            self.printEcho(listFolders)
+
+
+
+            # check path match without Basename
+            #       find out index number of inVerBasename from the listFrolder
+            inVerBasenameIndex = listFolders.index(inVerBasename)
+            self.printEcho('inVerBasenameIndex : {}'.format(inVerBasenameIndex))
+
+            inVerBasenameNoVersion = inVerBasename.removesuffix(inVer)
+            if inVerBasenameNoVersion != inVerBasename:
+                versionIsSuffix = True
+            else:
+                inVerBasenameNoVersion = inVerBasename.removeprefix(inVer)
+                versionIsSuffix = False
+            self.printEcho('inVerBasenameNoVersion : {}'.format(inVerBasenameNoVersion))
+            self.printEcho('\n')
+
+
+            latestVerPathPattern = None
+
+            # Reverse the List to start backward from the highest version
+            listFolders.sort(reverse = True)
+            for i in listFolders:
+                println('\ni : <folder> ' + i)
+                #compareBaseName = listFolders[i + (inVerBasenameIndex + 1)]
+                compareBaseName = i
+                latestVerBaseName = None
+
+
+
+
+
+
+
+
+                self.printEcho('check if-condition 1 of 6')
+                '''
+                check the < number of Digit > of the VerBasename:
+                                        v#### == v####
+                                  V####_layer == v####_layer
+                five0010_lightPearl_wip_v#### == five0010_lightPearl_wip_v####
+                '''
+                if len(compareBaseName) == len(inVerBasename):
+
+
+                    if versionPatternFrontOrEnd(inVerBasename, inVer) == 'End':
+                        compareBaseNameSplit_noVersion = compareBaseName.removesuffix(compareBaseName[len(inVer) * -1::])
+                    elif versionPatternFrontOrEnd(inVerBasename, inVer) == 'Front':
+                        compareBaseNameSplit_noVersion = compareBaseName.removeprefix(compareBaseName[0:len(inVer):])
+
+
+
+
+
+
+
+
+                    self.printEcho('check if-condition 2 of 6')
+                    '''
+                    check basename without Version :
+                                          <Empty> == <Empty> (eg. v####)
+                                           _layer == _layer
+                         five0010_lightPearl_wip_ == five0010_lightPearl_wip_
+
+                    '''
+                    if compareBaseNameSplit_noVersion == inVerBasenameNoVersion:
+
+                        if versionPatternFrontOrEnd(inVerBasename, inVer) == 'End':
+                            compareBaseNameSplit_AfterInVer = compareBaseName.removeprefix(compareBaseNameSplit_noVersion)
+
+                        elif versionPatternFrontOrEnd(inVerBasename, inVer) == 'Front':
+                            compareBaseNameSplit_AfterInVer = compareBaseName.removesuffix(compareBaseNameSplit_noVersion)
+
+                        self.printEcho('compareBaseNameSplit_AfterInVer : {}'.format(compareBaseNameSplit_AfterInVer))
+
+
+
+
+
+
+
+
+                        self.printEcho('check if-condition 3 of 6')
+                        '''
+                        check version pattern starts with "v" or "V"
+                                        v???? == v????
+                                        V???? == V????
+
+                        '''
+                        if compareBaseNameSplit_AfterInVer.startswith('v') or compareBaseNameSplit_AfterInVer.startswith('V'):
+                            #print('have v or V.')
+
+
+
+
+
+
+
+
+                            self.printEcho('check if-condition 4 of 6')
+                            '''
+                            check version pattern starts with "v" or "V"
+                                            ?#### == ?####
+                            '''
+                            # To compare if the folder contain the same image sequence
+                            if compareBaseNameSplit_AfterInVer[1::].isdigit():
+
+
+                                inVerPathPattern      =os.path.normpath( os.path.join(inVerPathObjLong.parent, inVerBasename,   inVerLongpath_tail.rstrip(inVerFullpath_name)[1:-1]) )
+                                compareVerPathPattern =os.path.normpath( os.path.join(inVerPathObjLong.parent, compareBaseName, inVerLongpath_tail.rstrip(inVerFullpath_name)[1:-1]) )
+                                self.printEcho('\ninVerBasename         : {}'.format(inVerBasename))
+                                self.printEcho('inVerPathPattern      : {}'.format(inVerPathPattern))
+                                self.printEcho('compareBaseName       : {}'.format(compareBaseName))
+                                self.printEcho('compareVerPathPattern : {}\n'.format(compareVerPathPattern))
+
+
+
+                                self.printEcho('check if-condition 5 of 6')
+                                '''
+                                check if compareVerPathPattern exist?
+
+                                '''
+                                if os.path.isdir(compareVerPathPattern):
+                                    # check the compare Paths
+                                    listFiles = os.listdir(compareVerPathPattern)
+                                    #print(listFiles)
+
+
+                                    for listedfile in listFiles:
+
+                                        #print('nameStemPattern : {}'.format(nameStemPattern(listedfile)))
+
+                                        '''
+                                        print('{} vs {}'.format(listedfile, inVerFullpath_stem + '.'))
+                                        if listedfile.startswith(inVerFullpath_stem + '.'):
+                                            print('                         : {}'.format(inVerFullpath_stem))
+                                            print('Matched pattern filename : {}'.format(listedfile))
+                                            break
+                                            '''
+
+                                        #print('{} vs {}'.format(nameStemPattern(listedfile) + '.',     inVerFullpath_stem + '.'))
+                                        #if (nameStemPattern(listedfile) + '.') == (inVerFullpath_stem + '.'):
+                                        #print('{} vs {}'.format(nameStemPattern(listedfile) + '.',     nameStemPattern(inVerFullpath_name) + '.'))
+
+
+
+
+
+
+
+
+                                        self.printEcho('check if-condition 6 of 6')
+                                        if (nameStemPattern(listedfile) + '.') == (nameStemPattern(inVerFullpath_name) + '.'):
+                                            #print('                         : {}'.format(nameStemPattern(listedfile) + '.'))
+                                            #print('Matched pattern filename : {}'.format(listedfile))
+
+                                            latestVerPathPattern = compareVerPathPattern
+                                            latestVerBaseName = compareBaseName
+
+                                            self.printEcho('<><>'*20 + '\n' + latestVerPathPattern +'\n' + '<><>'*20)
+                                            self.printEcho('latestVerBaseName FOUND :' + latestVerBaseName)
+                                            break
+                                        else:
+                                            #print('No Match pattern filename : x x x')
+
+                                            pass
+
+
+                                    if latestVerBaseName != None:
+                                        #print('269 break')
+                                        break
+                                else:
+                                    println('Failed after check if-condition 5 of 6')
+                            else:
+                                println('Failed after check if-condition 4 of 6')
+                        else:
+                            println('Failed after check if-condition 3 of 6')
+                    else:
+                        println('Failed after check if-condition 2 of 6')
+                else:
+                    println('Failed after check if-condition 1 of 6')
+
+
+            self.printEcho('Latest WIP folder :')
+            self.printEcho(latestVerPathPattern)
+            self.printEcho(latestVerBaseName)
+            return latestVerPathPattern, str(latestVerBaseName)
+
+
+        def apply_filter():
+            '''
+            This is the core filtering logic. It loops through all items in the list
+            and hides or shows them based on the filter checkboxes.
+            '''
+            show_outdated = self.sceneUpdateUi.checkBox_1.isChecked()
+            show_up_to_date = self.sceneUpdateUi.checkBox_2.isChecked()
+
+            self.printEcho('show_outdated value   : {}'.format(show_outdated))
+            self.printEcho('show_up_to_date value : {}'.format(show_up_to_date))
+
+            # Loop through every single row in the QListWidget
+            self.printEcho('self.sceneUpdateUi.listWidget.count() :: {}'.format(self.sceneUpdateUi.listWidget.count()))
+
+            outdatedCounter = 0
+            FreezedCounter = 0
+
+            for i in range(self.sceneUpdateUi.listWidget.count()):
+
+                item = self.sceneUpdateUi.listWidget.item(i)
+
+                status = item.data(roleStatus) # Get the status we stored earlier
+                #self.printEcho('item   : {}'.format(item))
+                #self.printEcho('status : {}'.format(status))
+
+                # We handle separators with their preceding item, so we skip them here.
+                if status == "separatorItem":
+                    continue
+
+                # Default to hidden, then show if it matches a checked filter
+                is_visible = False
+                if status == "OutDated" and show_outdated:
+                    is_visible = True
+                    outdatedCounter += 1
+                elif status == "up-to-date" and show_up_to_date:
+                    is_visible = True
+                    FontObject = QFont()
+                    FontObject.setBold(False)
+                    item.setBackground(QColor(20, 250, 20, 20)) #RGBA 0-255
+                    #item.setTextColor(QColor(20, 255, 20, 255)) #RGBA 0-255
+                    item.setFont(FontObject)
+                    item.setCheckState(Qt.Unchecked)
+                    item.setFlags(Qt.NoItemFlags)
+
+                isNotFreezeStatus = item.data(role7NodeIsNotFreeze)
+                if isNotFreezeStatus == 'Freeze':
+                    item.setBackground(QColor(0, 150, 200, 75)) #RGBA 0-255
+                    item.setCheckState(Qt.Unchecked)
+                    item.setFlags(Qt.NoItemFlags)
+                    FreezedCounter += 1
+
+                    showText = (f'\n'
+                                f'< {item.data(role1Nodename)} >               [{item.data(role6NodeClass)}]               --{item.data(role7NodeIsNotFreeze)}--\n'
+                                f'{item.data(role2CurrentBasename)}     :::     {item.data(role4LatestBasename)}\n'
+                                f'\n'
+                                f'Latest path : {item.data(role5LatestLongWithTail)}'
+                                f'\n')
+                else:
+                    showText = (f'\n'
+                                f'< {item.data(role1Nodename)} >               [{item.data(role6NodeClass)}]\n'
+                                f'{item.data(role2CurrentBasename)}     :::     {item.data(role4LatestBasename)}\n'
+                                f'\n'
+                                f'Latest path : {item.data(role5LatestLongWithTail)}'
+                                f'\n')
+
+
+                self.printEcho(item.data(role2CurrentBasename))
+                self.printEcho('Updated showText :')
+                self.printEcho(showText)
+                item.setText(showText)
+
+
+                # Set the item's visibility based on the logic above
+                item.setHidden(not is_visible)
+
+                # Now, handle the separator that follows the item.
+                # Check if there is a next item and if it's our separator.
+                if (i + 1) < self.sceneUpdateUi.listWidget.count():
+                    separator_item = self.sceneUpdateUi.listWidget.item(i + 1)
+                    if separator_item.data(roleStatus) == "separatorItem":
+                        # Hide or show the separator to match the item above it
+                        separator_item.setHidden(not is_visible)
+
+            self.sceneUpdateUi.TextLabel.setText('Number of Out Dated Node : {}   (included {} freezed))'.format(outdatedCounter, FreezedCounter))
+
+        # Body ============================
+
+        initializeUi()
+
+        dictFoundVersionNodes = {}
+
+        foundNodeNamesWithFileKnob = (findNodeWithFileKnob())
+        foundNodeNamesWithFileKnob.sort()
+
+        self.printEcho('foundNodeNamesWithFileKnob : {}'.format(foundNodeNamesWithFileKnob))
+
+        if not foundNodeNamesWithFileKnob:
+            self.printEcho("\nNo nodes of the target types were found in the script.")
+        else:
+            self.printEcho(f"\nFound a total of {len(foundNodeNamesWithFileKnob)} matching nodes. Details below:")
+            self.printEcho("=" * 40)
+
+            # Loop through the dictionary and print the contents.
+            # .items() gives us both the key (nodeName) and value (filePath) for each entry.
+            for nodeName in foundNodeNamesWithFileKnob:
+                theNode = nuke.toNode(nodeName)
+                theNodeClass = theNode.Class()
+                theNodeName = theNode.knob('name').value()
+                theNodeFilepath = theNode.knob('file').value()
+                if theNode.knob('file').enabled():
+                    theNodeIsNotFreeze = 'NotFreeze'
+                else:
+                    theNodeIsNotFreeze = 'Freeze'
+
+                self.printEcho(f"Node Name: {theNodeName}")
+                self.printEcho(f"Node Class : {theNodeClass}")
+                self.printEcho(f"File Path: {theNodeFilepath}")
+
+
+                versionPathInfo = CheckVerPath(theNodeFilepath)
+                self.printEcho('versionPathInfo :')
+                self.printEcho(f'versionPathInfo[0] : {versionPathInfo[0]}')
+                self.printEcho(f'versionPathInfo[1] : {versionPathInfo[1]}')
+                self.printEcho(f'versionPathInfo[2] : {versionPathInfo[2]}')
+                self.printEcho(f'versionPathInfo[3] : {versionPathInfo[3]}')
+                self.printEcho(f'versionPathInfo[4] : {versionPathInfo[4]}')
+                self.printEcho(f'versionPathInfo[5] : {versionPathInfo[5]}')
+
+
+
+                if versionPathInfo[0] != None:
+                    dictFoundVersionNodes.update({nodeName : [versionPathInfo[0], versionPathInfo[1], versionPathInfo[2], os.path.normpath(theNodeFilepath), versionPathInfo[3], versionPathInfo[4], theNodeClass, theNodeIsNotFreeze]})
+
+            self.printEcho("--- Search Complete ---")
+
+        self.sceneUpdateUi.listWidget.clear()
+        listFoundVersionNodeName = []
+
+        #dictionary format :
+        #           Key     : NodeName  > Read6
+        #           Value   : Use a List to Store [
+        #                                           0 currentNode Version                       > v0011
+        #                                           1 currentVersion Basename                   > five0010_lightPearl_wip_v0011
+        #                                           2 currentVersion Basename Longpath          > N:\mnt\job\24068PantenePokemon\WorkingFile\PantenePokemon\scenes\zzzToliet\bensonPipelineTest\components\lightPearl\images\five0010_lightPearl_wip_v0011
+        #                                           3 currentVersion Basename Longpath with tail> N:\mnt\job\24068PantenePokemon\WorkingFile\PantenePokemon\scenes\zzzToliet\bensonPipelineTest\components\lightPearl\images\five0010_lightPearl_wip_v0011\pearlA_rlyr\pearlA_rlyr.Cryptomatte.%04d.exr
+        #                                           4 currentVersion Fullpath                   > N:\mnt\job\24068PantenePokemon\WorkingFile\PantenePokemon\scenes\zzzToliet\bensonPipelineTest\components\lightPearl\images\five0010_lightPearl_wip_v0011\pearlA_rlyr
+        #                                           5 currentVersion filename                   > None
+        #                                           6 Node Class                                > Read
+        #                                           7 currentNode theNodeIsNotFreeze            > True
+        #                                           ===== the following will be added later =====
+        #                                           8 LatestVersion Fullpath                    > N:\mnt\job\24068PantenePokemon\WorkingFile\PantenePokemon\scenes\zzzToliet\bensonPipelineTest\components\lightPearl\images\five0010_lightPearl_wip_v0021\pearlA_rlyr
+        #                                           9 LatestVersion Basename                    > five0010_lightPearl_wip_v0021
+        #
+        #
+        #                                           ]
+
+
+        for key in dictFoundVersionNodes:
+            #print('{} --- {} {} {} {} {} {}'.format(key, dictFoundVersionNodes.get(key)[0], dictFoundVersionNodes.get(key)[1], dictFoundVersionNodes.get(key)[2],  dictFoundVersionNodes.get(key)[3], dictFoundVersionNodes.get(key)[4], dictFoundVersionNodes.get(key)[5]))
+
+            # for compatible in python 3.6 or before, dictionary is unordered. Use another sorted list to drive dictionary order.
+            listFoundVersionNodeName.append(key)
+
+
+
+        listFoundVersionNodeName.sort()
+        # remark : After sorted the order is like < Read1 -> Read18 -> Read2 -> Read3)
+
+        counter = 0
+
+        roleStatus                  = Qt.UserRole
+        role1Nodename               = Qt.UserRole + 1
+        role2CurrentBasename        = Qt.UserRole + 2
+        role3CurrentLongWithTail    = Qt.UserRole + 3
+        role4LatestBasename         = Qt.UserRole + 4
+        role5LatestLongWithTail     = Qt.UserRole + 5
+        role6NodeClass              = Qt.UserRole + 6
+        role7NodeIsNotFreeze        = Qt.UserRole + 7
+        role11DisplayText           = Qt.UserRole + 11
+
+
+        for keyNodeName in listFoundVersionNodeName:
+            #println('\nisLatestVersion(keyNodeName, dictFoundVersionNodes.get(keyNodeName)[0], dictFoundVersionNodes.get(keyNodeName)[1], dictFoundVersionNodes.get(keyNodeName)[2], dictFoundVersionNodes.get(keyNodeName)[3])')
+            #print(dictFoundVersionNodes.get(keyNodeName)[2])
+            #print(os.path.normpath(dictFoundVersionNodes.get(keyNodeName)[2]))
+            latestVersionPath = isLatestVersion(keyNodeName, dictFoundVersionNodes.get(keyNodeName)[0], dictFoundVersionNodes.get(keyNodeName)[1],dictFoundVersionNodes.get(keyNodeName)[2], dictFoundVersionNodes.get(keyNodeName)[3])
+
+
+            dictFoundVersionNodes[keyNodeName].append(latestVersionPath[0])
+            dictFoundVersionNodes[keyNodeName].append(latestVersionPath[1])
+
+            '''
+            counterFor = 0
+            for dictValueListItem in dictFoundVersionNodes[keyNodeName]:
+                print(counterFor)
+                print(type(dictValueListItem))
+                print(dictValueListItem)
+                counterFor += 1
+            print()
+            '''
+
+            counter += 1
+            item = QListWidgetItem()
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setFlags(item.flags() & ~Qt.ItemIsSelectable)
+            item.setCheckState(Qt.Checked)
+            '''
+            Explanation:
+
+            item.flags(): This gets the current flags of the item.
+
+            &: This is the bitwise AND operator.
+
+            ~: This is the bitwise NOT operator.
+
+            ~Qt.ItemIsSelectable: This creates a bitmask where all bits are 1 except for the one corresponding to Qt.ItemIsSelectable.
+
+            item.flags() & ~Qt.ItemIsSelectable: This operation keeps all the flags that were already set, except for Qt.ItemIsSelectable, which is effectively turned off.
+            '''
+
+            showCurrentLongWithTail = str(dictFoundVersionNodes.get(keyNodeName)[4]).replace(os.sep, '/')
+            showNewLongWithTail     = str(dictFoundVersionNodes.get(keyNodeName)[8]).replace(os.sep, '/')
+
+            if showCurrentLongWithTail == showNewLongWithTail:
+                #upToDateFont = QFont()
+                #upToDateFont.setBold(False)
+                showStatus = "up-to-date"
+                item.setBackground(QColor(20, 250, 20, 20)) #RGBA 0-255
+                #item.setTextColor(QColor(20, 255, 20, 255)) #RGBA 0-255
+                #item.setFont(upToDateFont)
+
+
+            else:
+                outDatedFont = QFont()
+                outDatedFont.setBold(True)
+                showStatus = "OutDated"
+                item.setBackground(QColor(255, 10, 10, 125)) #RGBA 0-255
+                #item.setTextColor(QColor(250, 20, 20, 255)) #RGBA 0-255
+                item.setFont(outDatedFont)
+
+            item.setData(roleStatus                 , showStatus)
+            item.setData(role1Nodename              , keyNodeName)
+            item.setData(role2CurrentBasename       , dictFoundVersionNodes.get(keyNodeName)[1])
+            item.setData(role3CurrentLongWithTail   , showCurrentLongWithTail)
+            item.setData(role4LatestBasename        , dictFoundVersionNodes.get(keyNodeName)[9])
+            item.setData(role5LatestLongWithTail    , showNewLongWithTail)
+            item.setData(role6NodeClass             , dictFoundVersionNodes.get(keyNodeName)[6])
+            item.setData(role7NodeIsNotFreeze       , dictFoundVersionNodes.get(keyNodeName)[7])
+
+
+            showText = (f'\n'
+                        f'< {item.data(role1Nodename)} >               [{item.data(role6NodeClass)}]          -{item.data(role7NodeIsNotFreeze)}-\n'
+                        f'{item.data(role2CurrentBasename)}     :::     {item.data(role4LatestBasename)}\n'
+                        f'\n'
+                        f'Latest path : {item.data(role5LatestLongWithTail)}'
+                        f'\n')
+
+            item.setData(role11DisplayText           , showText)
+            item.setText(item.data(role11DisplayText))
+
+
+
+
+
+            self.sceneUpdateUi.listWidget.addItem(item)
+
+            separator = QListWidgetItem()
+            separator.setSizeHint(QSize(0, 1))
+            #separator.setBackground(QColor("black"))
+            separator.setBackground(QColor(50, 50, 50, 255)) #RGBA 0-255
+            separator.setFlags(Qt.NoItemFlags)
+            separator.setData(roleStatus                 , "separatorItem")
+            self.sceneUpdateUi.listWidget.addItem(separator)
+
+        self.sceneUpdateUi.show()
+        apply_filter()
+
 
 
     def reviveAction(self):
@@ -1259,7 +2204,8 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
                     try:
                         #disabled this upon Apple and Sally request for a heavy shot.
-                        nuke.onScriptLoad(self.launchSceneUpdate())
+                        #nuke.onScriptLoad(self.launchSceneUpdate())
+                        nuke.onScriptLoad(self.openSceneUpdate())
                         #QMessageBox.information(self, 'Auto Scene Update', 'Check if Scene Update is needed ?')
                     except:
                         self.printEcho('PASS "nuke.onScriptLoad(self.launchSceneUpdate())"')
@@ -1280,7 +2226,8 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
                 try:
                     #disabled this upon Apple and Sally request for a heavy shot.
-                    nuke.onScriptLoad(self.launchSceneUpdate())
+                    #nuke.onScriptLoad(self.launchSceneUpdate())
+                    nuke.onScriptLoad(self.openSceneUpdate())
                     #QMessageBox.information(self, 'Auto Scene Update', 'Check if Scene Update is needed ?')
                 except:
                     self.printEcho('PASS "nuke.onScriptLoad(self.launchSceneUpdate())"')
@@ -1468,31 +2415,31 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
                 self.printEcho('another WIP ver.')
                 self.nukeUpdateMetadataNodeFps()
                 self.nukeUpdateWriteNodeVer()
-                println('1502')
+
                 nuke.scriptSave()
-                println('1504')
+
                 nukeEnv = nuke.env
                 isAssist = nukeEnv['assist']
                 println(nukeEnv['assist'])
-                println('1508')
+
 
                 if isAssist:
-                    println('1512')
+
                     if inShowDoneMsgBox == True:
-                        println('1514')
+
                         theMessage = 'Be Careful !\nBe Careful !!\nBe Careful !!!\n' + 'Currently in < Nuke Assist >.\n\n' + 'Only <Nuke Script WIP version _v#### > and <fps metadata> are updated.\n\nNone of <Write Nodes> are updated. Therefore :\n\n'+ '     1) Do not render this nuke script verion.\n' + '     2) Before submit render, you must <Version Up> in Nuke or NukeX to align the write node version number.'
                         QMessageBox.information(self, 'WARNING !!! ', theMessage)
-                        println('1516')
+
                 else:
-                    println('1519')
+
                     if inShowDoneMsgBox == True:
-                        println('1521')
+
                         theMessage = 'WIP version up, Done.\n\nbigK_Write nodes --- version numbers aligned.\nbigK_ModifyMetadata nodes --- fps metadata aligned to Project Setting.'
                         QMessageBox.information(self, 'version up', theMessage)
-                        println('1523')
-                    println('1524')
 
-                println('1526')
+
+
+
 
 
         elif in_houdini:
@@ -1500,7 +2447,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             if inShowDoneMsgBox == True:
                 hou.ui.displayMessage('Done.', buttons=('OK',), default_choice=0, close_choice=0)
 
-        println('1534')
+
 
 
     def myDialogShow2(self, inTitle = 'inTitle', inMessage = 'inMessage'):
@@ -2842,7 +3789,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         '''
 
 
-        bd = nukescripts.nukescripts.autoBackdrop()
+        bd = nukescripts.autoBackdrop()
 
         bd.setXpos(int(xpMin-marginWidth/2 + rightOffSetSpace * 1.8))
         bd.setYpos(int(ypMin-marginHeight/2 - yLabelSpace))
@@ -4250,9 +5197,6 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         except:
             println('No Value.')'''
 
-sys.path.append(r'N:\bpPipeline\bigKeeperPy\py\pySide2UI\ui')
-import childMenu as UiPyChild # path : N:\BigKeeper         WIP : N:\BigKeeper\py\pySide2UI\ui
-sys.path.remove(r'N:\bpPipeline\bigKeeperPy\py\pySide2UI\ui')
 
 # The QT Child window class
 class ChildWindow(UiPyChild.Ui_MainWindow, QMainWindow):
@@ -4266,6 +5210,13 @@ class subListView(UiList.Ui_MainWindow, QMainWindow):
         super(subListView, self).__init__(parent)
         self.setupUi(self)
         self.setWindowModality(Qt.ApplicationModal)
+
+
+class SceneUpDateListView(UiListB.Ui_MainWindow, QMainWindow):
+    def __init__(self, parent = None):
+        super(SceneUpDateListView, self).__init__(parent)
+        self.setupUi(self)
+        #self.setWindowModality(Qt.ApplicationModal)
 
 '''
 class prerendKeywordListView(UiList.Ui_MainWindow, QMainWindow):
