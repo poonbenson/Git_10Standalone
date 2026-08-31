@@ -1,4 +1,4 @@
-winTitlePrefix = 'BigKeeper_20260820m'
+winTitlePrefix = '20260831f'
 #winTitlePrefix = 'BigKeeper_20250810a - For Release'
 
 # To print-message by with line number
@@ -6,7 +6,7 @@ from inspect import currentframe
 def println(inContent = '-'):
     print('{} : {}'.format(currentframe().f_back.f_lineno, inContent))
 
-import subprocess, os, sys, time, webbrowser, pathlib, shutil
+import subprocess, os, sys, time, pathlib, shutil
 println('PYTHON version : {}'.format(sys.version))
 
 # path of bigKeeperTest_publish : N:\BigKeeper
@@ -65,8 +65,10 @@ except:
 # Pre-Define Global Variables
 pathOfIconPathsStudio = r'N:\bpPipeline\bigKeeperPyIni\bigPathsStudio.ini'
 
-edge_path=r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
-webbrowser.register('edge', None, webbrowser.BackgroundBrowser(edge_path))
+edgePath = r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+edgeShotlistProfilePath = r'C:\localScript\edgeShotlistProfile'
+publicGmailLoginPath = r'N:\bpPipeline\bigKeeperPyIni\bpuserpublicGmail\login.txt'
+publicGmailPasswordPath = r'N:\bpPipeline\bigKeeperPyIni\bpuserpublicGmail\password.txt'
 
 # To determine current version mode (developer, tester or release)
 pathOfDeveloper = r'N:\bpPipeline\bigKeeperPy\repo_01Developer'
@@ -168,6 +170,13 @@ taskTypeNotSelected = '-----'
 # The first row of taskTypeShotPreset.txt / taskTypeAssetPreset.txt.
 # Keeps the comboBox showing nothing chosen, OK rejects it.
 
+pinnedProjectNames = ('BigAssetCollections',)
+# The projects that always sit at the top of the Project Name comboBox
+
+visualBoardExtension = '.pur'
+# The PureRef file the Visual Board buttons open. The board is named after the folder it sits
+# in, and it is opened through its Windows file association.
+
 freeLayerMaskType = 'FreeLayerMask'
 # The inType of the Free LayerMask Write node, and the tail of its version folder name :
 # v0007_FreeLayerMask. nukeBornWriteNode builds the folder, nukeUpdateWriteNodeVer finds
@@ -176,6 +185,13 @@ freeLayerMaskType = 'FreeLayerMask'
 bigKWriteTypeKnobName = 'bigKWriteType'
 # User knob stamped on every bigK Write node at birth, holding its inType.
 # Nodes made before this knob existed return None, which is exactly "not special".
+
+compWriteNodePresetFileName = 'compWriteNodePreset.txt'
+# The per project Write node preset, in the project work folder next to compPrerendPreset.txt
+# and the two taskType preset files. One preset per line.
+
+compWriteNodeSingleFileTypes = ['mov', 'mp4', 'mxf']
+# File types that write one single file instead of a frame sequence, so the .%04d frame padding is dropped from the path.
 
 in_nuke = None
 in_maya = None
@@ -303,8 +319,26 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         # The parent folder last picked for a FreeLayerMask Write node. This session only.
         self.freeLayerMaskLastFolder = ''
 
+        # The preset line last picked for a Write node. This session only.
+        self.compWriteNodePresetLastChoice = ''
+
         self.comboBoxEntries = self.listBigKeeperProject()
         self.comboBoxEntries.sort()
+
+        # The pinned projects sit at the top of the comboBox, in the order written in
+        # pinnedProjectNames. It is comboBoxEntries that is reordered, never the widget :
+        # the comboBox fires activated[int] and comboBoxAction2 turns that index back into
+        # a project name through this very list, so the two must stay in the same order.
+        # A name that is not in the list is skipped, an xml entry can be renamed, and
+        # listBigKeeperProject drops any project whose path is off the N drive.
+        pinnedEntries = []
+        for eachPinnedName in pinnedProjectNames:
+            if eachPinnedName in self.comboBoxEntries:
+                pinnedEntries.append(eachPinnedName)
+                self.comboBoxEntries.remove(eachPinnedName)
+
+        self.comboBoxEntries = pinnedEntries + self.comboBoxEntries
+
         self.comboBoxProjects.addItems(self.comboBoxEntries)
         self.pushButton_2.clicked.connect(self.launchProjExplorer)
 
@@ -408,6 +442,14 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         self.pushButton_LaunchGpuCoreController.setText('Deadline GPU\nController')
 
 
+        self.checkBox.toggled.connect(self.publicGmailCheckBoxAction)
+        self.checkBox.setChecked(True)
+        self.publicGmailCheckBoxAction()
+
+        self.pushButton.clicked.connect(self.copyPublicGmailLogin)
+        self.pushButton_3.clicked.connect(self.copyPublicGmailPassword)
+
+
 
         self.pushButton_shotlist.clicked.connect(self.launchShotlist)
         self.pushButton_shotlist.setText(self.iconPathRead(pathOfIconPathsStudio, 'SHOTLIST', 'label'))
@@ -438,6 +480,16 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
         self.pushButton_19.clicked.connect(lambda : self.assetShotExploreAction('typeScene'))
         self.pushButton_20.clicked.connect(lambda : self.assetShotExploreAction('typeLib'))
+
+        self.pushButton_vBoardShotTab.clicked.connect(lambda : self.visualBoardAction('typeScene', 'levelRoot'))
+        self.pushButton_vBoardSeq.clicked.connect(lambda : self.visualBoardAction('typeScene', 'levelSequence'))
+        self.pushButton_vBoardShot.clicked.connect(lambda : self.visualBoardAction('typeScene', 'levelShot'))
+        self.pushButton_vBoardScnTask.clicked.connect(lambda : self.visualBoardAction('typeScene', 'levelTask'))
+        self.pushButton_vBoardAssetTab.clicked.connect(lambda : self.visualBoardAction('typeLib', 'levelRoot'))
+        self.pushButton_vBoardType.clicked.connect(lambda : self.visualBoardAction('typeLib', 'levelSequence'))
+        self.pushButton_vBoardAsset.clicked.connect(lambda : self.visualBoardAction('typeLib', 'levelShot'))
+        self.pushButton_vBoardAssetTask.clicked.connect(lambda : self.visualBoardAction('typeLib', 'levelTask'))
+
         self.pushButton_Location_2.clicked.connect(self.openCurrentOpeningLocationPath)
         self.pushButton_versionUp.clicked.connect(lambda : self.versionUpSaveWIP(True))
         self.pushButton_versionUp.setStyleSheet("background-color:rgb(204,153,128); color:rgb(136, 77, 85)")
@@ -713,8 +765,8 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         self.pushButton_num6.setText('UpReadVer')
 
         '''
-        self.pushButton_num9.clicked.connect(lambda: self.openSceneUpdate())
-        self.pushButton_num9.setText('open ScnUpdate')
+        self.pushButton_num9.clicked.connect(lambda: self.compWriteNodePresetApplyToSelected())
+        self.pushButton_num9.setText('WriteNode Preset')
 
         self.pushButton_num8.clicked.connect(lambda: self.cleanUpDelAction('moveAction'))
         self.pushButton_num8.setText('moveAction')
@@ -830,11 +882,78 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
         getBigKInfo = bigKeeperInfoGlobal_published.bigKeepCLASS()
         println(os.path.join(self.subDict[self.selProjPath], 'bigPathsProject.ini'))
-        #println(os.path.join(self.selProjRootPath, 'bigPathsProject.ini'))
 
-        #webbrowser.open(self.iconPathRead('SHOTLIST', 'Path'), new = 2)
-        #webbrowser.open(self.iconPathRead(os.path.join(self.subDict[self.selProjPath], 'bigPathsProject.ini'), 'SHOTLIST', 'Path'), new = 2)
-        webbrowser.get('edge').open(self.iconPathRead(os.path.join(self.subDict[self.selProjPath], 'bigPathsProject.ini'), 'SHOTLIST', 'Path'))
+        shotlistUrl = self.iconPathRead(os.path.join(self.subDict[self.selProjPath], 'bigPathsProject.ini'), 'SHOTLIST', 'Path')
+
+        self.openUrlInEdge(shotlistUrl)
+
+
+    def launchShotlist(self):
+        println('\ndef >>>>> launchShotlist')
+
+        getBigKInfo = bigKeeperInfoGlobal_published.bigKeepCLASS()
+        println(os.path.join(self.subDict[self.selProjPath], 'bigPathsProject.ini'))
+
+        shotlistUrl = self.iconPathRead(os.path.join(self.subDict[self.selProjPath], 'bigPathsProject.ini'), 'SHOTLIST', 'Path')
+        println('shotlist url ' + shotlistUrl)
+        println('shotlist edge profile ' + edgeShotlistProfilePath)
+
+        subprocess.Popen([edgePath,
+                          '--user-data-dir=' + edgeShotlistProfilePath,
+                          '--no-first-run',
+                          '--no-default-browser-check',
+                          shotlistUrl])
+
+
+    def openUrlInEdge(self, inUrl):
+        println('\ndef >>>>> openUrlInEdge')
+        println('url ' + inUrl)
+
+        if self.checkBox.isChecked():
+            println('edge profile ' + edgeShotlistProfilePath)
+
+            subprocess.Popen([edgePath,
+                              '--user-data-dir=' + edgeShotlistProfilePath,
+                              '--no-first-run',
+                              '--no-default-browser-check',
+                              inUrl])
+        else:
+            println('edge default profile')
+
+            subprocess.Popen([edgePath, inUrl])
+
+
+    def publicGmailCheckBoxAction(self):
+        println('\ndef >>>>> publicGmailCheckBoxAction')
+
+        isUsingPublicGmail = self.checkBox.isChecked()
+        println('using bpuserpublic gmail : ' + str(isUsingPublicGmail))
+
+        self.pushButton.setEnabled(isUsingPublicGmail)
+        self.pushButton_3.setEnabled(isUsingPublicGmail)
+
+
+    def copyPublicGmailLogin(self):
+        println('\ndef >>>>> copyPublicGmailLogin')
+        println(publicGmailLoginPath)
+
+        with open(publicGmailLoginPath, 'r') as theFile:
+            theText = theFile.read().strip()
+
+        QApplication.clipboard().setText(theText)
+        println('login copied to clipboard')
+
+
+    def copyPublicGmailPassword(self):
+        println('\ndef >>>>> copyPublicGmailPassword')
+        println(publicGmailPasswordPath)
+
+        with open(publicGmailPasswordPath, 'r') as theFile:
+            theText = theFile.read().strip()
+
+        QApplication.clipboard().setText(theText)
+        println('password copied to clipboard')
+
 
     def launchCommentClient(self):
         println('\ndef >>>>> launchCommentClient')
@@ -999,7 +1118,16 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
     def openScheduleLink(self):
         println('\ndef >>>>> openScheduleLink')
-        webbrowser.open('https://calendar.google.com/calendar/r', new = 2)
+
+        scheduleUrl = 'https://calendar.google.com/calendar/r'
+        println('schedule url ' + scheduleUrl)
+        println('schedule edge profile ' + edgeShotlistProfilePath)
+
+        subprocess.Popen([edgePath,
+                          '--user-data-dir=' + edgeShotlistProfilePath,
+                          '--no-first-run',
+                          '--no-default-browser-check',
+                          scheduleUrl])
 
     def openScheduleFolder(self):
         println('\ndef >>>>> openScheduleFolder')
@@ -1078,6 +1206,12 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.pushButton_shotAction3.setEnabled(False)
             self.pushButton_newScnTask.setDisabled(True)
 
+            # cnvtSelProjScnPath is selProjScnPath here. The three lists were just cleared, so the
+            # location line and the < explore > button go back to the scenes root along with them,
+            # on the first load and on every Refresh.
+            self.sceneLocationPath = cnvtSelProjScnPath
+            self.lineEdit_sceneLocation.setText(self.sceneLocationPath)
+
         elif inType == 'typeLib':
             self.list1Entries = []
             self.list1Entries = listSeq
@@ -1094,11 +1228,15 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.pushButton_assetAction3.setEnabled(False)
             self.pushButton_newAssetTask.setDisabled(True)
 
+            # cnvtSelProjScnPath is selProjLibPath here.
+            self.assetLocationPath = cnvtSelProjScnPath
+            self.lineEdit_assetLocation.setText(self.assetLocationPath)
+
 
 
     def comboBoxAction2(self, item):
         if item != " ":
-			# to fix : PySide2 as String, PySide6 as Int
+            # to fix : PySide2 as String, PySide6 as Int
             # if item is from QCombox will be (int), if item from previous proj cache will be (str).
             if type(item) == int:
                 # convert item (int) to item (str)
@@ -1141,9 +1279,9 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.printEcho('self.subDict[self.selProjWipCode]:' + self.subDict[self.selProjWipCode]) # eg. wip
             self.printEcho('self.subDict[self.selProjPublishCode]:' + self.subDict[self.selProjPublishCode]) # eg. published
 
+            # The location line and the < explore > button are set inside listWidget_1_appear,
+            # so the Refresh buttons land on the same path this first load does.
             self.listWidget_1_appear('typeScene')
-            self.sceneLocationPath = self.subDict[self.selProjPath]
-            self.lineEdit_sceneLocation.setText(self.sceneLocationPath)
             #===== end of typeScene Section =====
 
             # Decided to code seperately, Asset Tab and Shot Tab do not have to be the same layout
@@ -1163,8 +1301,6 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.printEcho('self.subDict[self.selProjPublishCode]:' + self.subDict[self.selProjPublishCode]) # eg. published
 
             self.listWidget_1_appear('typeLib')
-            self.assetLocationPath = self.subDict[self.selProjPath]
-            self.lineEdit_assetLocation.setText(self.assetLocationPath)
             #===== end of typeLib Section =====
 
             self.writeProjCache(self.selProj)
@@ -2556,10 +2692,84 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         elif  inType == 'typeLib':
             os.startfile(self.assetLocationPath)
 
+    def visualBoardAction(self, inType, inLevel):
+        println('\ndef >>>>> visualBoardAction')
+        self.printEcho(inType)
+        self.printEcho(inLevel)
+
+        # Each button owns one level and stays there, so the Seq row still opens the seq board
+        # after the user has clicked all the way down to a task. The path is rebuilt from this
+        # tab's own listWidgets : selProjScnShotTaskPath, selShot and selTask are shared by both
+        # tabs, so reading them here would open the other tab's folder.
+        if inType == 'typeScene':
+            visualBoardRootPath = self.selProjScnPath
+            listWidgetSequence = self.listWidget_1
+            listWidgetShot = self.listWidget_2
+            listWidgetTask = self.listWidget_3
+        elif inType == 'typeLib':
+            visualBoardRootPath = self.selProjLibPath
+            listWidgetSequence = self.listWidget_AssetType
+            listWidgetShot = self.listWidget_Asset
+            listWidgetTask = self.listWidget_AssetTask
+
+        # The rows above the wanted level are always picked already : a shot list only holds rows
+        # after a seq was clicked, and a task list only after a shot was. So the last one is the
+        # only one that can be empty.
+        if inLevel == 'levelRoot':
+            selectedItems = []
+        elif inLevel == 'levelSequence':
+            selectedItems = [listWidgetSequence.currentItem()]
+        elif inLevel == 'levelShot':
+            selectedItems = [listWidgetSequence.currentItem(), listWidgetShot.currentItem()]
+        elif inLevel == 'levelTask':
+            selectedItems = [listWidgetSequence.currentItem(), listWidgetShot.currentItem(), listWidgetTask.currentItem()]
+
+        if selectedItems != [] and selectedItems[-1] == None:
+            QMessageBox.warning(self, 'Ooops!', 'Visual Board\n\nNothing is selected on this row yet.')
+            return
+
+        folderNames = [eachItem.text() for eachItem in selectedItems]
+
+        # Every task folder sits under the shot's components folder.
+        if inLevel == 'levelTask':
+            folderNames.insert(2, 'components')
+
+        visualBoardFolderPath = os.path.join(visualBoardRootPath, *folderNames)
+
+        # The board is named after the folder it sits in : tvcSeq\tvcSeq.pur, sc010\sc010.pur,
+        # comp\comp.pur, and at the top level scenes\scenes.pur or lib\lib.pur.
+        visualBoardName = os.path.basename(visualBoardFolderPath) + visualBoardExtension
+        visualBoardFullPath = os.path.join(visualBoardFolderPath, visualBoardName)
+        self.printEcho(visualBoardFullPath)
+
+        if not os.path.isfile(visualBoardFullPath):
+            answer = QMessageBox.question(self, 'Visual Board',
+                                          'There is no Visual Board here yet :\n\n{}\n\nCreate < {} > ?'.format(
+                                              visualBoardFolderPath, visualBoardName),
+                                          QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
+            if answer == QMessageBox.No:
+                println('Visual Board is not created. Nothing is opened.')
+                return
+
+            open(visualBoardFullPath, 'w').close()
+            println('Visual Board created : {}'.format(visualBoardFullPath))
+
+        # .pur opens through its Windows file association.
+        os.startfile(visualBoardFullPath)
+
     def openCurrentOpeningLocationPath(self):
         println('\ndef >>>>> openCurrentOpeningLocationPath')
-        #os.startfile(self.currentOpeningLocationPath)
-        os.startfile(self.lineEdit_Location_2.text())
+
+        # Read the variable, not the lineEdit. The lineEdit is a display that
+        # updateCurrentOpeningLocationPath writes into, and it is not read-only, so anything
+        # typed into it used to be handed straight to os.startfile. The two Asset / Shot tab
+        # < explore > buttons already read their variable this way.
+        if self.currentOpeningLocationPath == '-NONE-':
+            QMessageBox.warning(self, 'Ooops!', 'Nothing is open, so there is no location to explore.')
+            return
+
+        os.startfile(self.currentOpeningLocationPath)
 
     def listBigKeeperProject(self):
         println('\ndef >>>>> listBigKeeperProject')
@@ -2739,7 +2949,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         println('\ndef >>>>> prerendKeywordAction')
         self.printEcho(item)
 
-		# PySide6
+        # PySide6
         item = self.prerendKeywordsContent[item]
 
         self.prerendKeywordUi.lineEdit.setText(item)
@@ -4168,6 +4378,230 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         bigKInfo = bigKeeperInfoGlobal_published.bigKeepCLASS()
         self.printEcho(bigKInfo.currentCompIniSuffix())
 
+    def compWriteNodePresetRead(self):
+        println('\ndef >>>>> compWriteNodePresetRead')
+
+        # The per project Write node preset. Read from currentProjWorkPath(), the project of the
+        # script open in Nuke, the same source prerendKeywordShow uses for compPrerendPreset.txt.
+        # Deliberately NOT subDict[selProjPath] : that is whichever project the browser comboBox
+        # is showing, which is a different project as soon as the user browses elsewhere.
+        bigKInfo = bigKeeperInfoGlobal_published.bigKeepCLASS()
+
+        presetFullName = os.path.join(bigKInfo.currentProjWorkPath(), compWriteNodePresetFileName)
+        self.printEcho(presetFullName)
+
+        if not os.path.isfile(presetFullName):
+            QMessageBox.warning(self, 'Ooops!', 'Write Node preset is missing :\n\n{}'.format(presetFullName))
+            return []
+
+        with open(presetFullName) as file:
+            contents = file.readlines()
+
+        presetLines = []
+
+        for eachLine in contents:
+            eachPreset = eachLine.replace('\n', "").strip()
+            if eachPreset != '' and not eachPreset.startswith('#'):
+                presetLines.append(eachPreset)
+
+        self.printEcho(presetLines)
+
+        return presetLines
+
+
+    def compWriteNodePresetAsk(self):
+        println('\ndef >>>>> compWriteNodePresetAsk')
+
+        # Asks once and returns the display name of the chosen preset plus its knob and value
+        # pairs, in the order the .txt wrote them. Returns an empty string and an empty list when
+        # there is nothing to choose, when a line is malformed or when the user cancels, so the
+        # caller tests displayLabel and leaves the nodes alone.
+        # One line of the .txt :
+        #   <setText><exr 16>|<file_type><exr>|<datatype><16 bit half>|<compression><Zip (16 scanlines)>
+        # Field 1 is the only thing the artist sees. Every other field is one Nuke knob name and
+        # the value to set on it, so a new knob is one more |<knobName><value> and no code change.
+        # The whole file is parsed before the picker opens : the .txt is hand edited by the
+        # project leader, so a malformed line stops everything and names itself, rather than
+        # quietly dropping a preset out of the list.
+        presetLines = self.compWriteNodePresetRead()
+
+        if presetLines == []:
+            println('No Write Node preset to choose from.')
+            return '', []
+
+        # displayLabels feeds the picker, allKnobValuePairs holds the parsed rest. The two lists
+        # stay index aligned, so the picked row reads straight out of both.
+        displayLabels = []
+        allKnobValuePairs = []
+
+        for eachLine in presetLines:
+            knobValuePairs = []
+
+            for eachField in eachLine.split('|'):
+                eachField = eachField.strip()
+
+                # <knobName><value> : strip the outer angle brackets, then split on the pair in
+                # the middle. '<><exr>' becomes ['', 'exr'], caught by the empty-name test below.
+                if not eachField.startswith('<') or not eachField.endswith('>') or '><' not in eachField:
+                    QMessageBox.warning(self, 'Ooops!', 'This preset field is not shaped as <knobName><value> :\n\n{}\n\nin the line :\n\n{}'.format(eachField, eachLine))
+                    return '', []
+
+                knobName, knobValue = eachField[1 : -1].split('><', 1)
+                knobValuePairs.append((knobName.strip(), knobValue.strip()))
+
+            if len(knobValuePairs) < 2:
+                QMessageBox.warning(self, 'Ooops!', 'This preset line needs a <setText> field and a <file_type> field :\n\n{}'.format(eachLine))
+                return '', []
+
+            firstKnobName, firstKnobValue = knobValuePairs[0]
+            secondKnobName, secondKnobValue = knobValuePairs[1]
+
+            if firstKnobName != 'setText' or firstKnobValue == '':
+                QMessageBox.warning(self, 'Ooops!', 'The first field of a preset line must be <setText><display name> :\n\n{}'.format(eachLine))
+                return '', []
+
+            # file_type has to be set before Nuke will even create datatype / compression /
+            # mov64_codec, so its place in the line is not a matter of taste.
+            if secondKnobName != 'file_type' or secondKnobValue == '':
+                QMessageBox.warning(self, 'Ooops!', 'The second field of a preset line must be <file_type><value> :\n\n{}'.format(eachLine))
+                return '', []
+
+            for eachKnobName, eachKnobValue in knobValuePairs[1 : ]:
+                if eachKnobName == '' or eachKnobValue == '':
+                    QMessageBox.warning(self, 'Ooops!', 'This preset line carries an empty knob name or an empty value :\n\n{}'.format(eachLine))
+                    return '', []
+
+            displayLabels.append(firstKnobValue)
+            allKnobValuePairs.append(knobValuePairs[1 : ])
+
+        # getItem hands back the text, not the row, so two lines sharing a display name would
+        # silently apply whichever one comes first.
+        if len(set(displayLabels)) != len(displayLabels):
+            QMessageBox.warning(self, 'Ooops!', 'Two preset lines carry the same <setText> display name :\n\n     {}'.format('\n     '.join(displayLabels)))
+            return '', []
+
+        # Pre-select the preset picked last time. This session only, same idea as
+        # freeLayerMaskLastFolder, so a second node usually needs one click.
+        if self.compWriteNodePresetLastChoice in displayLabels:
+            currentRow = displayLabels.index(self.compWriteNodePresetLastChoice)
+        else:
+            currentRow = 0
+
+        displayLabel, ok = QInputDialog.getItem(self, 'WriteNode Preset', 'Preset :', displayLabels, currentRow, False)
+
+        if not ok:
+            self.printEcho('Cancelled. No preset is applied.')
+            return '', []
+
+        self.compWriteNodePresetLastChoice = displayLabel
+
+        knobValuePairs = allKnobValuePairs[displayLabels.index(displayLabel)]
+        self.printEcho(knobValuePairs)
+
+        return displayLabel, knobValuePairs
+
+
+    def compWriteNodePresetApply(self, inNode, inKnobValuePairs):
+        println('\ndef >>>>> compWriteNodePresetApply')
+
+        # Sets every knob the chosen preset line names, in the order the .txt wrote them, then
+        # rewrites the tail of the file path. Returns True when the node was changed, so the
+        # caller can list what it did.
+        # compWriteNodePresetAsk already checked the shape of the line, so file_type is always
+        # the first pair. That order is what makes the rest reachable : Nuke only creates
+        # datatype / compression / mov64_codec after the file type is set.
+        # Only Enumeration knobs are supported for now. A numeric knob such as mov64_fps says so
+        # by name instead of raising.
+        fileType = ''
+
+        for eachKnobName, eachKnobValue in inKnobValuePairs:
+
+            eachKnob = inNode.knob(eachKnobName)
+
+            if eachKnob is None:
+                QMessageBox.warning(self, 'Ooops!', '{} :\n\nThis Nuke has no knob named < {} >.\n\nThe rest of the preset is not applied.'.format(inNode.name(), eachKnobName))
+                return False
+
+            # values() belongs to Enumeration knobs only.
+            if not hasattr(eachKnob, 'values'):
+                QMessageBox.warning(self, 'Ooops!', '{} :\n\nKnob < {} > is not an enumeration.\n\nOnly enumeration knobs are supported for now.\nThe rest of the preset is not applied.'.format(inNode.name(), eachKnobName))
+                return False
+
+            # Some Nuke enumeration entries carry a tab and a tooltip behind the value, so
+            # compare against the part in front of the tab.
+            knobValues = [eachEntry.split('\t')[0] for eachEntry in eachKnob.values()]
+
+            if eachKnobValue not in knobValues:
+                QMessageBox.warning(self, 'Ooops!', '{} :\n\nKnob < {} > does not accept < {} >.\n\nIt accepts :\n\n     {}'.format(inNode.name(), eachKnobName, eachKnobValue, '\n     '.join(knobValues)))
+                return False
+
+            eachKnob.setValue(eachKnobValue)
+
+            # The file_type value is also the file extension the path is rewritten with.
+            if eachKnobName == 'file_type':
+                fileType = eachKnobValue
+
+        fileKnob = inNode.knob('file')
+
+        if not fileKnob.enabled():
+            println('{} : <file> knob is locked. The format knobs are set, the path is not rewritten.'.format(inNode.name()))
+            return True
+
+        # Rewrite only the tail. The folder, the shot name, the sub-name and the suffix all stay
+        # exactly as they are, which is what lets this def run on an existing node as well as on
+        # a node that was just born. A sequence keeps its .%04d, a movie is one single file and
+        # loses it. The sub-name passed nameInputCheck, whose whitelist is A-Z a-z 0-9 _ , so the
+        # only dots in the basename are the padding and the extension.
+        originalPath = fileKnob.value()
+        self.printEcho('originalPath : {}'.format(originalPath))
+
+        headPath, baseName = os.path.split(originalPath)
+        stemName = baseName.rsplit('.', 1)[0]
+
+        if stemName.endswith('.%04d'):
+            stemName = stemName[0 : -len('.%04d')]
+
+        if fileType in compWriteNodeSingleFileTypes:
+            baseName = stemName + '.' + fileType
+        else:
+            baseName = stemName + '.%04d.' + fileType
+
+        updatedPath = os.path.join(headPath, baseName).replace(os.sep, '/')
+        self.printEcho('updatedPath  : {}'.format(updatedPath))
+
+        fileKnob.setValue(updatedPath)
+
+        return True
+
+
+    def compWriteNodePresetApplyToSelected(self):
+        println('\ndef >>>>> compWriteNodePresetApplyToSelected')
+
+        # The preset is asked once, then applied to every selected Write node. Ask and Apply are
+        # two defs on purpose : this button needs one dialog for many nodes, and later
+        # nukeBornWriteNode will need the same pair for one node it has just created.
+        selectedWriteNodes = nuke.selectedNodes('Write')
+
+        if len(selectedWriteNodes) == 0:
+            QMessageBox.information(self, 'message', 'No Write node is selected.')
+            return
+
+        displayLabel, knobValuePairs = self.compWriteNodePresetAsk()
+
+        if displayLabel == '':
+            return
+
+        appliedNodeNames = []
+
+        for eachNode in selectedWriteNodes:
+            if self.compWriteNodePresetApply(eachNode, knobValuePairs):
+                appliedNodeNames.append(eachNode.name())
+
+        # Every node that failed already raised its own warning naming itself, so only report
+        # the ones that went through.
+        if len(appliedNodeNames) > 0:
+            doneMessage = displayLabel + '\n\nis applied to :\n\n     ' + '\n     '.join(appliedNodeNames)
+            QMessageBox.information(self, 'message', doneMessage)
 
     def nukeBornWriteNode(self, inType, *args):
         println('\ndef >>>>> nukeBornWriteNode')
@@ -4206,6 +4640,19 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
                 QMessageBox.information(self, 'message', errorMessage)
             else:
                 bigKInfo = bigKeeperInfoGlobal_published.bigKeepCLASS()
+
+                # The output format is asked before the retry loop, so it is asked once no matter
+                # how many times a clashed path sends the loop round again. Asking here also means
+                # a Cancel leaves no half built node behind, same as the suffix dialogs below.
+                # An empty label is Cancel, an unreadable .txt, or a .txt that is not there at all,
+                # all of which already showed their own message.
+                # The node is created with the .exr frame name the branches below build, then
+                # compWriteNodePresetApply rewrites the tail of that path once the node exists.
+                presetDisplayLabel, presetKnobValuePairs = self.compWriteNodePresetAsk()
+
+                if presetDisplayLabel == '':
+                    println('WriteNode Preset dialog cancelled. Nothing is created.')
+                    return
 
                 # The target folder does not exist on disk yet, a Write node only makes it at
                 # render time. So the other Write nodes in this script are the only place a
@@ -4395,6 +4842,11 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
                 newCreatedNode.knob('create_directories').setValue(True)
                 newCreatedNode.knob('metadata').setValue('all metadata')
                 newCreatedNode.knob('noprefix').setValue(True)
+
+                # The format knobs, and the tail of the path the <file> knob was just given.
+                # Its own warnings name the node and the knob, and a node it refuses to touch is
+                # left as the .exr sequence the branches above built, so nothing is checked here.
+                self.compWriteNodePresetApply(newCreatedNode, presetKnobValuePairs)
 
                 # Stamp the type on the node itself. The node name only carries answerName,
                 # which is the sub-name for LayerMask and Prerend, so the name cannot tell
