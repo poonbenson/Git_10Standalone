@@ -1,4 +1,4 @@
-winTitlePrefix = 'BigKeeper_20260903a'
+winTitlePrefix = 'BigKeeper_20260906i'
 #winTitlePrefix = 'BigKeeper_20250810a - For Release'
 #This have to match the line in the launcher.bat lines, to keep launcher singleton:
 #taskkill /FI "WINDOWTITLE eq BigKeeper_*" /F
@@ -180,6 +180,12 @@ visualBoardExtension = '.pur'
 # The PureRef file the Visual Board buttons open. The board is named after the folder it sits
 # in, and it is opened through its Windows file association.
 
+visualBoardStorageRootPath = r'K:\z_VisualBoard'
+# Every Visual Board lives here, mirroring the project tree under its own project folder :
+# K:\z_VisualBoard\ChanFilm\lib\bldg5060s\bldg5060s.pur. The matching folder on the job drive
+# keeps a Windows shortcut pointing back here. Nothing checks that K: is mapped -- an unmapped
+# drive fails on the spot with its own error.
+
 freeLayerMaskType = 'FreeLayerMask'
 # The inType of the Free LayerMask Write node, and the tail of its version folder name :
 # v0007_FreeLayerMask. nukeBornWriteNode builds the folder, nukeUpdateWriteNodeVer finds
@@ -188,6 +194,28 @@ freeLayerMaskType = 'FreeLayerMask'
 bigKWriteTypeKnobName = 'bigKWriteType'
 # User knob stamped on every bigK Write node at birth, holding its inType.
 # Nodes made before this knob existed return None, which is exactly "not special".
+
+# the four version digits by looking backwards from this word instead of rebuilding the path.
+
+bigKWriteTypeKnobName = 'bigKWriteType'
+# User knob stamped on every bigK Write node at birth, holding its inType.
+# Nodes made before this knob existed return None, which is exactly "not special".
+
+lightQCType = 'LightQC'
+lightQCBackdropName = 'bigK_' + lightQCType
+lightQCPublishFolderName = 'published' + lightQCType
+# The LightQC step, renamed from LightPublish. One word drives the backdrop inType, the
+# backdrop node name (bigK_LightQC), and the folder it copies into (publishedLightQC).
+# Nothing reads the old bigK_lightPublish backdrop or the old publishedLightPreRend folder --
+# lightQCCopyAction tells the artist to re-build the backdrop instead.
+
+compWriteNodePresetFileName = 'compWriteNodePreset.txt'
+# The per project Write node preset, in the project work folder next to compPrerendPreset.txt
+8# and the two taskType preset files. One preset per line.
+
+compWriteNodeSingleFileTypes = ['mov', 'mp4', 'mxf']
+
+
 
 compWriteNodePresetFileName = 'compWriteNodePreset.txt'
 # The per project Write node preset, in the project work folder next to compPrerendPreset.txt
@@ -379,8 +407,8 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         self.listWidget_3.itemClicked.connect(lambda : self.listWidget_shotTask_action(self.listWidget_3.currentItem(), 'typeScene'))
         self.listWidget_AssetTask.itemClicked.connect(lambda : self.listWidget_shotTask_action(self.listWidget_AssetTask.currentItem(), 'typeLib'))
         #self.listWidget_3.itemDoubleClicked.connect(self.listWidget_3B_action)
-        self.listWidget_3.itemDoubleClicked.connect(self.listWidget_3C_action)
-        self.listWidget_AssetTask.itemDoubleClicked.connect(self.listWidget_3C_action)
+        self.listWidget_3.itemDoubleClicked.connect(lambda : self.listWidget_3C_action(self.listWidget_3.currentItem(), 'typeScene'))
+        self.listWidget_AssetTask.itemDoubleClicked.connect(lambda : self.listWidget_3C_action(self.listWidget_AssetTask.currentItem(), 'typeLib'))
         self.listWidget_3.setSortingEnabled(True)
         self.listWidget_AssetTask.setSortingEnabled(True)
 
@@ -541,7 +569,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
 
         self.pushButton_scnUpdate.clicked.connect(self.openSceneUpdate)
-        self.pushButton_scnUpdate.setText('Scene Update NEW')
+        self.pushButton_scnUpdate.setText('Scene Update')
         self.pushButton_scnUpdate_2.clicked.connect(self.launchSceneUpdate)
         self.pushButton_scnUpdate_2.setText('Scene Update OLD')
 
@@ -615,8 +643,8 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         self.pushButton_genWriteCompMasterV.setText('CompMaster-V')
         self.pushButton_genWriteFreeLayerMask.clicked.connect(lambda : self.nukeBornWriteNode(freeLayerMaskType))
 
-        self.pushButton_genLightPublishBackdrop.clicked.connect(self.lightPublishBornBackdrop)
-        self.pushButton_lightPublishAction.clicked.connect(self.lightPublishCopyAction)
+        self.pushButton_genLightPublishBackdrop.clicked.connect(self.lightQCBornBackdrop)
+        self.pushButton_lightPublishAction.clicked.connect(self.lightQCCopyAction)
 
 
         self.pushButton_genCgRenderBackdrop.clicked.connect(self.genCgRenderBackdrop)
@@ -657,6 +685,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         #self.tabWidget.setTabVisible(2, self.horizontalSlider_echoSwitch.value())
         self.tabWidget.setTabVisible(3, self.horizontalSlider_echoSwitch.value())
         self.pushButton_genWriteFreeLayerMask.setEnabled(self.horizontalSlider_echoSwitch.value() > 0)
+        self.pushButton_scnUpdate_2.setVisible(self.horizontalSlider_echoSwitch.value() > 0)
 
 
         self.pushButton_shotAction.setText('shotActionMenu')
@@ -805,6 +834,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         #self.tabWidget.setTabVisible(2, self.horizontalSlider_echoSwitch.value())
         self.tabWidget.setTabVisible(3, self.horizontalSlider_echoSwitch.value())
         self.pushButton_genWriteFreeLayerMask.setEnabled(self.horizontalSlider_echoSwitch.value() > 0)
+        self.pushButton_scnUpdate_2.setVisible(self.horizontalSlider_echoSwitch.value() > 0)
 
 
     '''def listWidget_1_receivedList(self, item):
@@ -1173,6 +1203,22 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         return listLevel
 
 
+    def taskLevelConvert(self, inType):
+        println('\ndef >>>>> taskLevelConvert')
+
+        # The task level of whichever tab is asking : the shot's or asset's components folder,
+        # the shot or asset name, and the task name. Same shape as listTypeConvert, a plain
+        # tuple unpacked at the call site. It exists because selProjScnShotTaskPath, selShot
+        # and selTask used to be one set shared by both tabs, so pressing a Shot tab button
+        # after clicking around the Asset tab acted on the asset's folder.
+        if inType == 'typeScene':
+            taskLevel = (self.selProjScnShotTaskPath, self.selShot, self.selTask)
+        elif inType == 'typeLib':
+            taskLevel = (self.selProjAssetTypeAssetTaskPath, self.selProjAssetTypeAssetName, self.selProjAssetTypeAssetTaskName)
+
+        return taskLevel
+
+
     def listWidget_1_appear(self, inType):
         println('\ndef >>>>> listWidget_1_appear')
         self.printEcho(inType)
@@ -1426,7 +1472,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.pushButton_shotAction3.setEnabled(False)
         elif inType == 'typeLib':
             self.printEcho(item3.text())
-            self.selShot = item3.text()
+            self.selProjAssetTypeAssetName = item3.text()
             self.selProjAssetTypeAssetTaskPath = os.path.join(self.selProjAssetTypeAssetPath, item3.text(), "components")
             folderList = os.listdir(self.selProjAssetTypeAssetTaskPath)
             listTask = []
@@ -1437,8 +1483,6 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             listTask.sort()
             self.listWidget_AssetTask.clear()
             self.listWidget_AssetTask.addItems(listTask)
-            # to commonly use the same Variable, rest of the Action Def will be commonly shared.
-            self.selProjScnShotTaskPath = self.selProjAssetTypeAssetTaskPath
 
             self.assetLocationPath = os.path.join(self.selProjAssetTypeAssetPath, item3.text())
             self.lineEdit_assetLocation.setText(self.assetLocationPath)
@@ -1449,16 +1493,32 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.pushButton_assetAction3.setEnabled(False)
 
 
-    def listWidget_3C_action(self, item):
+    def listWidget_3C_action(self, item, inType):
         println('\ndef >>>>> listWidget_3C_action')
         try:
             theItem = item.text()
         except:
             theItem = item
-        self.selProjScnShotTaskWIPPath = os.path.join(self.selProjScnShotTaskPath, theItem, self.subDict[self.selProjWipCode])
+
+        # Each tab keeps its own browse state now, so the components folder is read back through
+        # inType. It used to read the shared selProjScnShotTaskPath, which pointed at whichever
+        # tab was drilled into last.
+        taskParentPath, shotName, taskName = self.taskLevelConvert(inType)
+
+        self.selProjScnShotTaskWIPPath = os.path.join(taskParentPath, theItem, self.subDict[self.selProjWipCode])
         self.printEcho(self.selProjScnShotTaskWIPPath)
         self.printEcho(theItem)
-        self.selTask = theItem
+
+        if inType == 'typeScene':
+            self.selTask = theItem
+        elif inType == 'typeLib':
+            self.selProjAssetTypeAssetTaskName = theItem
+
+        # The New WIP dialog below is one shared instance whose two buttons are connected once
+        # at startup in initializeNewWIPDialogWindow, so createNewWIP2 and useCurrentWIP cannot
+        # be given the tag by lambda. This is the only def that opens the dialog, so it is
+        # stashed here, the same way newTaskKeywordShow stashes newTaskKeywordInType.
+        self.newWipInType = inType
 
         #checkResult = self.createNewWIP(item)
         #println('checkResult is :')
@@ -1518,35 +1578,41 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
                     self.printEcho('current changes have not yet been saved!')
                     nuke.scriptClose() ### pop a dialog instead of close.
                     if nuke.Root().modified() == False:
-                        nuke.scriptOpen(os.path.join(self.selProjScnShotTaskWIPPath, self.listFile[-1]))
-                        nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
-                        self.activateCurrentTab()
+                        if self.nukeScriptOpenTolerant(os.path.join(self.selProjScnShotTaskWIPPath, self.listFile[-1])):
+
+                            try:
+                                nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
+                            except:
+                                self.printEcho('PASS "nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())"')
+                                pass
+
+                            self.activateCurrentTab()
 
                 else:
 
                     nuke.scriptClose()
-                    nuke.scriptOpen(os.path.join(self.selProjScnShotTaskWIPPath, self.listFile[-1]))
-                    #nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
+                    if self.nukeScriptOpenTolerant(os.path.join(self.selProjScnShotTaskWIPPath, self.listFile[-1])):
+                        #nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
 
-                    try:
-                        nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
-                    except:
-                        self.printEcho('PASS "nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())"')
-                        pass
+                        try:
+                            nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
+                        except:
+                            self.printEcho('PASS "nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())"')
+                            pass
 
-                    # To avoid error message when launchSceneUpdate on a v0000
-                    #if noNeedSceneUpdateToken:
-                    try:
-                        #disabled this upon Apple and Sally request for a heavy shot.
-                        #nuke.onScriptLoad(self.launchSceneUpdate())
-                        nuke.onScriptLoad(self.openSceneUpdate())
-                        #QMessageBox.information(self, 'Auto Scene Update', 'Check if Scene Update is needed ?')
-                    except:
-                        self.printEcho('PASS "nuke.onScriptLoad(self.launchSceneUpdate())"')
-                        pass
+                        # To avoid error message when launchSceneUpdate on a v0000
+                        #if noNeedSceneUpdateToken:
+                        try:
+                            #disabled this upon Apple and Sally request for a heavy shot.
+                            #nuke.onScriptLoad(self.launchSceneUpdate())
+                            nuke.onScriptLoad(self.openSceneUpdate())
+                            #QMessageBox.information(self, 'Auto Scene Update', 'Check if Scene Update is needed ?')
+                        except:
+                            self.printEcho('PASS "nuke.onScriptLoad(self.launchSceneUpdate())"')
+                            pass
 
-                    self.activateCurrentTab()
-                    #window.close()
+                        self.activateCurrentTab()
+                        #window.close()
 
             elif in_houdini:
                     hou.hipFile.load(os.path.join(self.selProjScnShotTaskWIPPath, self.listFile[-1]))
@@ -1596,7 +1662,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.sceneUpdateUi.pushButton_exec_5.setVisible(False)
 
             self.sceneUpdateUi.TextLabel_2.setText('Click ::: Zoom to the node\n< Explore > Button ::: Open footage folder in explorer.\n\n ')
-            self.sceneUpdateUi.TextLabel_3.setText('Color Code\nRed    ::: Out Dated\nGreen ::: Up-to-date\nBlue    ::: Freeze\n')
+            self.sceneUpdateUi.TextLabel_3.setText('Color Code\nRed    ::: Out Dated\nGreen ::: Up-to-date\nBlue    ::: Freeze\nYellow ::: Path Not Found\n')
             self.sceneUpdateUi.lineEdit.setText('--- click on the above row to show the path here ---')
 
             self.sceneUpdateUi.pushButton.clicked.connect(openClickedItemLocationPath)
@@ -2018,16 +2084,21 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
 
             # use parent path to find all versions
+            # A Read node points at a folder that is not on disk any more often enough : the shot
+            # was renamed, the footage tree was moved, an outside vendor path was never on this
+            # network, the drive is not mapped. os.listdir raised FileNotFoundError on it and
+            # killed the caller's whole loop, so the dialog never opened for any node.
+            # < None, None > means < cannot be judged >. The caller lists such a node as
+            # pathNotFound rather than guessing a version for it.
+            if not os.path.isdir(inVerPathObjLong.parent):
+                println('Version parent folder is not there : {}'.format(inVerPathObjLong.parent))
+                return None, None
+
             listFolders = os.listdir(inVerPathObjLong.parent)
             listFolders.sort()
             self.printEcho(listFolders)
 
 
-
-            # check path match without Basename
-            #       find out index number of inVerBasename from the listFrolder
-            inVerBasenameIndex = listFolders.index(inVerBasename)
-            self.printEcho('inVerBasenameIndex : {}'.format(inVerBasenameIndex))
 
             inVerBasenameNoVersion = inVerBasename.removesuffix(inVer)
             if inVerBasenameNoVersion != inVerBasename:
@@ -2041,11 +2112,14 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
             latestVerPathPattern = None
 
+            # latestVerBaseName is assigned at the top of every pass of the for-loop below. An
+            # empty version folder never enters that loop, so it is set here as well.
+            latestVerBaseName = None
+
             # Reverse the List to start backward from the highest version
             listFolders.sort(reverse = True)
             for i in listFolders:
                 println('\ni : <folder> ' + i)
-                #compareBaseName = listFolders[i + (inVerBasenameIndex + 1)]
                 compareBaseName = i
                 latestVerBaseName = None
 
@@ -2207,8 +2281,9 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.printEcho('Latest WIP folder :')
             self.printEcho(latestVerPathPattern)
             self.printEcho(latestVerBaseName)
-            return latestVerPathPattern, str(latestVerBaseName)
-
+            # Not str(latestVerBaseName) any more : the caller needs a real None to tell
+            # < nothing matched > apart from a folder that is really called 'None'.
+            return latestVerPathPattern, latestVerBaseName
 
         def apply_filter():
             '''
@@ -2226,6 +2301,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
             outdatedCounter = 0
             FreezedCounter = 0
+            pathNotFoundCounter = 0
 
             for i in range(self.sceneUpdateUi.listWidget.count()):
 
@@ -2254,22 +2330,34 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
                     item.setCheckState(Qt.Unchecked)
                     item.setFlags(Qt.NoItemFlags)
 
+                elif status == "pathNotFound":
+                    # Neither of the two filters describes this row, and hiding a footage that
+                    # is not on disk any more would be one more way of < Scene Update is not
+                    # working >. It stays on screen whatever the checkboxes say.
+                    is_visible = True
+                    item.setBackground(QColor(255, 200, 0, 90)) #RGBA 0-255
+                    item.setData(Qt.CheckStateRole, None)
+                    item.setFlags(Qt.NoItemFlags)
+                    pathNotFoundCounter += 1
+
+                # A missing path is worth more than a freeze mark, so the yellow row keeps its
+                # colour and keeps its checkbox away.
                 isNotFreezeStatus = item.data(role7NodeIsNotFreeze)
-                if isNotFreezeStatus == 'Freeze':
+                if isNotFreezeStatus == 'Freeze' and status != "pathNotFound":
                     item.setBackground(QColor(0, 150, 200, 75)) #RGBA 0-255
                     item.setCheckState(Qt.Unchecked)
                     item.setFlags(Qt.NoItemFlags)
                     FreezedCounter += 1
 
                     showText = (f'\n'
-                                f'< {item.data(role1Nodename)} >               [{item.data(role6NodeClass)}]               --{item.data(role7NodeIsNotFreeze)}--\n'
+                                f'< {item.data(role1Nodename)} >               [{item.data(role6NodeClass)}]               --{item.data(role7NodeIsNotFreeze)}--          {item.data(role8CurrentPathMissing)}\n'
                                 f'{item.data(role2CurrentBasename)}     :::     {item.data(role4LatestBasename)}\n'
                                 f'\n'
                                 f'Latest path : {item.data(role5LatestLongWithTail)}'
                                 f'\n')
                 else:
                     showText = (f'\n'
-                                f'< {item.data(role1Nodename)} >               [{item.data(role6NodeClass)}]\n'
+                                f'< {item.data(role1Nodename)} >               [{item.data(role6NodeClass)}]          {item.data(role8CurrentPathMissing)}\n'
                                 f'{item.data(role2CurrentBasename)}     :::     {item.data(role4LatestBasename)}\n'
                                 f'\n'
                                 f'Latest path : {item.data(role5LatestLongWithTail)}'
@@ -2293,7 +2381,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
                         # Hide or show the separator to match the item above it
                         separator_item.setHidden(not is_visible)
 
-            self.sceneUpdateUi.TextLabel.setText('Number of Out Dated Node : {}   (included {} freezed))'.format(outdatedCounter, FreezedCounter))
+            self.sceneUpdateUi.TextLabel.setText('Number of Out Dated Node : {}   (included {} freezed))   Path Not Found : {}'.format(outdatedCounter, FreezedCounter, pathNotFoundCounter))
 
         # Body ============================
 
@@ -2363,6 +2451,9 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         #                                           8 LatestVersion Fullpath                    > N:\mnt\job\24068PantenePokemon\WorkingFile\PantenePokemon\scenes\zzzToliet\bensonPipelineTest\components\lightPearl\images\five0010_lightPearl_wip_v0021\pearlA_rlyr
         #                                           9 LatestVersion Basename                    > five0010_lightPearl_wip_v0021
         #
+        #                                             8 and 9 are both None when isLatestVersion
+        #                                             could not judge the node : the footage
+        #                                             folder is gone, or nothing in it matches.
         #
         #                                           ]
 
@@ -2380,6 +2471,11 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
         counter = 0
 
+        # Every row that is wrong in a way the artist should know about writes two lines in here,
+        # and they are shown in one warning box after the dialog is up. The list dialog reports
+        # versions, this box reports footage that is simply not on disk.
+        warningLines = []
+
         roleStatus                  = Qt.UserRole
         role1Nodename               = Qt.UserRole + 1
         role2CurrentBasename        = Qt.UserRole + 2
@@ -2388,6 +2484,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         role5LatestLongWithTail     = Qt.UserRole + 5
         role6NodeClass              = Qt.UserRole + 6
         role7NodeIsNotFreeze        = Qt.UserRole + 7
+        role8CurrentPathMissing     = Qt.UserRole + 8
         role11DisplayText           = Qt.UserRole + 11
 
 
@@ -2395,7 +2492,21 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             #println('\nisLatestVersion(keyNodeName, dictFoundVersionNodes.get(keyNodeName)[0], dictFoundVersionNodes.get(keyNodeName)[1], dictFoundVersionNodes.get(keyNodeName)[2], dictFoundVersionNodes.get(keyNodeName)[3])')
             #print(dictFoundVersionNodes.get(keyNodeName)[2])
             #print(os.path.normpath(dictFoundVersionNodes.get(keyNodeName)[2]))
-            latestVersionPath = isLatestVersion(keyNodeName, dictFoundVersionNodes.get(keyNodeName)[0], dictFoundVersionNodes.get(keyNodeName)[1],dictFoundVersionNodes.get(keyNodeName)[2], dictFoundVersionNodes.get(keyNodeName)[3])
+
+            # isLatestVersion reads the disk, so it meets whatever the artist left behind. The
+            # two known cases return < None, None > on their own, this try is for the rest :
+            # a permission error, a path that is a file where a folder is expected, a footage
+            # tree nobody expected. Before it, one bad node raised and killed this whole loop,
+            # and since self.sceneUpdateUi.show() sits after the loop the dialog never appeared
+            # at all - which is what the artists reported as < Scene Update is not working >.
+            theCannotJudgeReason = ''
+
+            try:
+                latestVersionPath = isLatestVersion(keyNodeName, dictFoundVersionNodes.get(keyNodeName)[0], dictFoundVersionNodes.get(keyNodeName)[1],dictFoundVersionNodes.get(keyNodeName)[2], dictFoundVersionNodes.get(keyNodeName)[3])
+            except Exception as theError:
+                theCannotJudgeReason = '{} : {}'.format(type(theError).__name__, theError)
+                println('< {} > cannot be judged : {}'.format(keyNodeName, theCannotJudgeReason))
+                latestVersionPath = None, None
 
 
             dictFoundVersionNodes[keyNodeName].append(latestVersionPath[0])
@@ -2431,37 +2542,78 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             '''
 
             showCurrentLongWithTail = str(dictFoundVersionNodes.get(keyNodeName)[4]).replace(os.sep, '/')
-            showNewLongWithTail     = str(dictFoundVersionNodes.get(keyNodeName)[8]).replace(os.sep, '/')
 
-            if showCurrentLongWithTail == showNewLongWithTail:
-                #upToDateFont = QFont()
-                #upToDateFont.setBold(False)
-                showStatus = "up-to-date"
-                item.setBackground(QColor(20, 250, 20, 20)) #RGBA 0-255
-                #item.setTextColor(QColor(20, 255, 20, 255)) #RGBA 0-255
-                #item.setFont(upToDateFont)
+            # [8] is None when isLatestVersion could not judge this node. It used to become the
+            # string 'None' here, which read as OutDated, arrived checked, and let
+            # < Update Selected > write the word None into the file knob. It gets its own
+            # status, its own colour and no checkbox instead.
+            # role5 is fed the current path, not a message : if the row ever does get checked,
+            # perSelectedAction then replaces the path with itself and changes nothing.
+            if dictFoundVersionNodes.get(keyNodeName)[8] is None:
+                showNewLongWithTail = showCurrentLongWithTail
+                showLatestBasename  = '--- path not found ---'
+                showStatus = "pathNotFound"
+                item.setBackground(QColor(255, 200, 0, 90)) #RGBA 0-255
+                item.setData(Qt.CheckStateRole, None)
+                item.setFlags(Qt.NoItemFlags)
 
+                # The row already says < path not found > in the compare line, so it carries no
+                # extra marker. There is no version to offer, which is what the wording says.
+                showCurrentPathMissing = ''
+
+                if theCannotJudgeReason == '':
+                    warningLines.append('< {} >   No version folder can be compared. There is nothing to update to.'.format(keyNodeName))
+                else:
+                    warningLines.append('< {} >   {}'.format(keyNodeName, theCannotJudgeReason))
+
+                warningLines.append('     {}\n'.format(showCurrentLongWithTail))
 
             else:
-                outDatedFont = QFont()
-                outDatedFont.setBold(True)
-                showStatus = "OutDated"
-                item.setBackground(QColor(255, 10, 10, 125)) #RGBA 0-255
-                #item.setTextColor(QColor(250, 20, 20, 255)) #RGBA 0-255
-                item.setFont(outDatedFont)
+                showNewLongWithTail = str(dictFoundVersionNodes.get(keyNodeName)[8]).replace(os.sep, '/')
+                showLatestBasename  = dictFoundVersionNodes.get(keyNodeName)[9]
+
+                # [4] is the folder that holds the frames, the same one the up-to-date test
+                # compares. A version folder that was deleted while a newer one sits beside it
+                # reads as a plain OutDated row, with nothing saying the footage in the script
+                # is already gone. The colour still describes the version, this marker describes
+                # existence, and the row stays checkable because updating is exactly the fix.
+                if os.path.isdir(dictFoundVersionNodes.get(keyNodeName)[4]):
+                    showCurrentPathMissing = ''
+                else:
+                    showCurrentPathMissing = '[Current Path Missing !!! ? User can still update to latest ver]'
+                    warningLines.append('< {} >   Current path is missing. It can still be updated to < {} >.'.format(keyNodeName, showLatestBasename))
+                    warningLines.append('     {}\n'.format(showCurrentLongWithTail))
+
+                if showCurrentLongWithTail == showNewLongWithTail:
+                    #upToDateFont = QFont()
+                    #upToDateFont.setBold(False)
+                    showStatus = "up-to-date"
+                    item.setBackground(QColor(20, 250, 20, 20)) #RGBA 0-255
+                    #item.setTextColor(QColor(20, 255, 20, 255)) #RGBA 0-255
+                    #item.setFont(upToDateFont)
+
+
+                else:
+                    outDatedFont = QFont()
+                    outDatedFont.setBold(True)
+                    showStatus = "OutDated"
+                    item.setBackground(QColor(255, 10, 10, 125)) #RGBA 0-255
+                    #item.setTextColor(QColor(250, 20, 20, 255)) #RGBA 0-255
+                    item.setFont(outDatedFont)
 
             item.setData(roleStatus                 , showStatus)
             item.setData(role1Nodename              , keyNodeName)
             item.setData(role2CurrentBasename       , dictFoundVersionNodes.get(keyNodeName)[1])
             item.setData(role3CurrentLongWithTail   , showCurrentLongWithTail)
-            item.setData(role4LatestBasename        , dictFoundVersionNodes.get(keyNodeName)[9])
+            item.setData(role4LatestBasename        , showLatestBasename)
             item.setData(role5LatestLongWithTail    , showNewLongWithTail)
             item.setData(role6NodeClass             , dictFoundVersionNodes.get(keyNodeName)[6])
             item.setData(role7NodeIsNotFreeze       , dictFoundVersionNodes.get(keyNodeName)[7])
+            item.setData(role8CurrentPathMissing    , showCurrentPathMissing)
 
 
             showText = (f'\n'
-                        f'< {item.data(role1Nodename)} >               [{item.data(role6NodeClass)}]          -{item.data(role7NodeIsNotFreeze)}-\n'
+                        f'< {item.data(role1Nodename)} >               [{item.data(role6NodeClass)}]          -{item.data(role7NodeIsNotFreeze)}-          {item.data(role8CurrentPathMissing)}\n'
                         f'{item.data(role2CurrentBasename)}     :::     {item.data(role4LatestBasename)}\n'
                         f'\n'
                         f'Latest path : {item.data(role5LatestLongWithTail)}'
@@ -2469,7 +2621,6 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
             item.setData(role11DisplayText           , showText)
             item.setText(item.data(role11DisplayText))
-
 
 
 
@@ -2486,6 +2637,11 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
         self.sceneUpdateUi.show()
         apply_filter()
+
+        # After show() and apply_filter(), so the list is already behind the box and the artist
+        # can match the node names against the rows.
+        if len(warningLines) > 0:
+            QMessageBox.warning(self, 'Ooops!', 'Scene Update cannot follow these nodes :\n\n{}\nTheir < file > knob points at a path that is not on disk.'.format('\n'.join(warningLines)))
 
 
 
@@ -2510,8 +2666,28 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
                 self.printEcho('current changes have not yet been saved!')
                 nuke.scriptClose() ### pop a dialog instead of close.
                 if nuke.Root().modified() == False:
-                    self.printEcho(os.path.join(bigKInfo.currentPath(), item.text()))
-                    nuke.scriptOpen(os.path.join(bigKInfo.currentPath(), item.text()))
+                    if self.nukeScriptOpenTolerant(os.path.join(bigKInfo.currentPath(), item.text())):
+
+                        try:
+                            nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
+                        except:
+                            self.printEcho('PASS "nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())"')
+                            pass
+
+                        try:
+                            #disabled this upon Apple and Sally request for a heavy shot.
+                            #nuke.onScriptLoad(self.launchSceneUpdate())
+                            nuke.onScriptLoad(self.openSceneUpdate())
+                            #QMessageBox.information(self, 'Auto Scene Update', 'Check if Scene Update is needed ?')
+                        except:
+                            self.printEcho('PASS "nuke.onScriptLoad(self.launchSceneUpdate())"')
+                            pass
+
+                        self.activateCurrentTab()
+
+            else:
+                nuke.scriptClose()
+                if self.nukeScriptOpenTolerant(os.path.join(bigKInfo.currentPath(), item.text())):
 
                     try:
                         nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
@@ -2529,28 +2705,6 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
                         pass
 
                     self.activateCurrentTab()
-
-            else:
-                nuke.scriptClose()
-                self.printEcho(os.path.join(bigKInfo.currentPath(), item.text()))
-                nuke.scriptOpen(os.path.join(bigKInfo.currentPath(), item.text()))
-
-                try:
-                    nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
-                except:
-                    self.printEcho('PASS "nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())"')
-                    pass
-
-                try:
-                    #disabled this upon Apple and Sally request for a heavy shot.
-                    #nuke.onScriptLoad(self.launchSceneUpdate())
-                    nuke.onScriptLoad(self.openSceneUpdate())
-                    #QMessageBox.information(self, 'Auto Scene Update', 'Check if Scene Update is needed ?')
-                except:
-                    self.printEcho('PASS "nuke.onScriptLoad(self.launchSceneUpdate())"')
-                    pass
-
-                self.activateCurrentTab()
 
 
         elif in_houdini:
@@ -2598,18 +2752,28 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
                 self.printEcho('current changes have not yet been saved!')
                 nuke.scriptClose() ### pop a dialog instead of close.
                 if nuke.Root().modified() == False:
-                    self.printEcho(os.path.join(self.selProjScnShotTaskWIPPath, item.text()))
-                    nuke.scriptOpen(os.path.join(self.selProjScnShotTaskWIPPath, item.text()))
-                    nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
-                    self.activateCurrentTab()
+                    if self.nukeScriptOpenTolerant(os.path.join(self.selProjScnShotTaskWIPPath, item.text())):
+
+                        try:
+                            nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
+                        except:
+                            self.printEcho('PASS "nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())"')
+                            pass
+
+                        self.activateCurrentTab()
 
 
             else:
                 nuke.scriptClose()
-                self.printEcho((os.path.join(self.selProjScnShotTaskWIPPath, item.text())))
-                nuke.scriptOpen(os.path.join(self.selProjScnShotTaskWIPPath, item.text()))
-                nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
-                self.activateCurrentTab()
+                if self.nukeScriptOpenTolerant(os.path.join(self.selProjScnShotTaskWIPPath, item.text())):
+
+                    try:
+                        nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
+                    except:
+                        self.printEcho('PASS "nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())"')
+                        pass
+
+                    self.activateCurrentTab()
 
         elif in_houdini:
             hou.hipFile.load(os.path.join(self.selProjScnShotTaskWIPPath, self.listFile[-1]))
@@ -2657,7 +2821,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.assetLocationPath = os.path.join(self.selProjAssetTypeAssetTaskPath, item.text())
             self.printEcho(self.assetLocationPath)
             self.lineEdit_assetLocation.setText(self.assetLocationPath)
-            self.selTask = item.text()
+            self.selProjAssetTypeAssetTaskName = item.text()
             #self.pushButton_CompLatestRv.setEnabled(True)
             self.pushButton_assetAction.setEnabled(True)
             self.pushButton_assetAction2.setEnabled(False)
@@ -2703,15 +2867,17 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
         # Each button owns one level and stays there, so the Seq row still opens the seq board
         # after the user has clicked all the way down to a task. The path is rebuilt from this
-        # tab's own listWidgets : selProjScnShotTaskPath, selShot and selTask are shared by both
-        # tabs, so reading them here would open the other tab's folder.
+        # tab's own listWidgets because the state variables only carry the level last clicked,
+        # and taskLevelConvert only reaches the task level.
         if inType == 'typeScene':
             visualBoardRootPath = self.selProjScnPath
+            visualBoardRootName = self.subDict[self.selProjScnCode]
             listWidgetSequence = self.listWidget_1
             listWidgetShot = self.listWidget_2
             listWidgetTask = self.listWidget_3
         elif inType == 'typeLib':
             visualBoardRootPath = self.selProjLibPath
+            visualBoardRootName = self.subDict[self.selProjLibCode]
             listWidgetSequence = self.listWidget_AssetType
             listWidgetShot = self.listWidget_Asset
             listWidgetTask = self.listWidget_AssetTask
@@ -2738,29 +2904,75 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         if inLevel == 'levelTask':
             folderNames.insert(2, 'components')
 
-        visualBoardFolderPath = os.path.join(visualBoardRootPath, *folderNames)
+        # The board itself lives in the storage tree, which mirrors the project tree level for
+        # level under its own project folder. The folder on the job drive only keeps a shortcut,
+        # so one board is never open from two places at once.
+        originalFolderPath = os.path.join(visualBoardRootPath, *folderNames)
+        storageFolderPath = os.path.join(visualBoardStorageRootPath, self.selProj, visualBoardRootName, *folderNames)
 
         # The board is named after the folder it sits in : tvcSeq\tvcSeq.pur, sc010\sc010.pur,
-        # comp\comp.pur, and at the top level scenes\scenes.pur or lib\lib.pur.
-        visualBoardName = os.path.basename(visualBoardFolderPath) + visualBoardExtension
-        visualBoardFullPath = os.path.join(visualBoardFolderPath, visualBoardName)
-        self.printEcho(visualBoardFullPath)
+        # comp\comp.pur, and at the top level scenes\scenes.pur or lib\lib.pur. Both trees end on
+        # the same folder, so the name is the same on both sides.
+        visualBoardName = os.path.basename(storageFolderPath) + visualBoardExtension
+        storageFullPath = os.path.join(storageFolderPath, visualBoardName)
+        originalFullPath = os.path.join(originalFolderPath, visualBoardName)
 
-        if not os.path.isfile(visualBoardFullPath):
-            answer = QMessageBox.question(self, 'Visual Board',
-                                          'There is no Visual Board here yet :\n\n{}\n\nCreate < {} > ?'.format(
-                                              visualBoardFolderPath, visualBoardName),
-                                          QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        # <name>.pur.lnk, so Explorer shows it as <name>.pur with file extensions hidden.
+        shortcutFullPath = os.path.join(originalFolderPath, visualBoardName + '.lnk')
+        self.printEcho(storageFullPath)
 
-            if answer == QMessageBox.No:
-                println('Visual Board is not created. Nothing is opened.')
-                return
+        if not os.path.isfile(storageFullPath):
 
-            open(visualBoardFullPath, 'w').close()
-            println('Visual Board created : {}'.format(visualBoardFullPath))
+            # A board made before the storage tree existed is copied there on the first press,
+            # with no question asked : it is the same board, only somewhere else.
+            boardToCopyPath = ''
+
+            if os.path.isfile(originalFullPath):
+                boardToCopyPath = originalFullPath
+            else:
+                answer = QMessageBox.question(self, 'Visual Board',
+                                              'There is no Visual Board here yet :\n\n{}\n\nCreate < {} > ?'.format(
+                                                  storageFolderPath, visualBoardName),
+                                              QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
+                if answer == QMessageBox.No:
+                    println('Visual Board is not created. Nothing is opened.')
+                    return
+
+            # The storage tree is built as it is used, so every level is made on its first press.
+            if not os.path.isdir(storageFolderPath):
+                os.makedirs(storageFolderPath)
+
+            if boardToCopyPath != '':
+                shutil.copy2(boardToCopyPath, storageFullPath)
+                println('Visual Board copied : {}    >>>    {}'.format(boardToCopyPath, storageFullPath))
+            else:
+                open(storageFullPath, 'w').close()
+                println('Visual Board created : {}'.format(storageFullPath))
+
+        # The copy is in place by now, so the board on the job drive goes. One that is open in
+        # PureRef, or held by the storage drive's sync, refuses to be deleted, so it is left where
+        # it is and tried again on the next press instead of failing the whole button.
+        if os.path.isfile(originalFullPath):
+            try:
+                os.remove(originalFullPath)
+                println('Old Visual Board deleted : {}'.format(originalFullPath))
+            except OSError as deleteProblem:
+                QMessageBox.warning(self, 'Ooops!',
+                                    'The old Visual Board could not be deleted :\n\n{}\n\n{}\n\nThe board opens from its new home anyway, and BigKeeper tries this again the next time you open it.'.format(
+                                        originalFullPath, deleteProblem))
+
+        # Rebuilt whenever it is missing, so a board moved by hand still gets one back. Same
+        # Shortcut.exe the RV comment folder uses :
+        # Shortcut.exe /f:"<the .lnk>" /a:c /t:"<what it points at>"
+        if not os.path.isfile(shortcutFullPath):
+            shortcutExecutablePath = os.path.normpath(os.path.join(externalToolPath, 'shortCut', 'Shortcut.exe'))
+            shortcutCommand = shortcutExecutablePath + ' /f:"' + shortcutFullPath + '" /a:c /t:"' + storageFullPath + '"'
+            self.printEcho('shortcutCommand :' + shortcutCommand)
+            os.system(shortcutCommand)
 
         # .pur opens through its Windows file association.
-        os.startfile(visualBoardFullPath)
+        os.startfile(storageFullPath)
 
     def openCurrentOpeningLocationPath(self):
         println('\ndef >>>>> openCurrentOpeningLocationPath')
@@ -3292,10 +3504,10 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             QMessageBox.warning(self, 'Ooops!', 'New Task\n\nPlease select a Task Type.')
             return
 
-        if inType == 'typeScene':
-            newParentPath = os.path.join(self.selProjScnShotPath, self.selShot, 'components')
-        elif inType == 'typeLib':
-            newParentPath = os.path.join(self.selProjAssetTypeAssetPath, self.selShot, 'components')
+        # The components folder is what listWidget_3_appear already built for this tab, so it
+        # is read back instead of being joined again out of the shared selShot.
+        taskParentPath, shotName, taskName = self.taskLevelConvert(inType)
+        newParentPath = taskParentPath
 
         problemReport = self.namesListCheck([item], newParentPath)
 
@@ -3549,14 +3761,18 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
     def createNewWIP2(self):
         print ('\ndef >>>>> createNewWIP2')
 
-        self.selProjScnShotTaskWIPPath = os.path.join(self.selProjScnShotTaskPath, self.selTask, self.subDict[self.selProjWipCode])
+        # Same as useCurrentWIP : newWipInType is stashed by listWidget_3C_action because this
+        # dialog's buttons are connected once at startup and cannot carry the tag by lambda.
+        taskParentPath, shotName, taskName = self.taskLevelConvert(self.newWipInType)
+
+        self.selProjScnShotTaskWIPPath = os.path.join(taskParentPath, taskName, self.subDict[self.selProjWipCode])
         self.printEcho(self.selProjScnShotTaskWIPPath)
 
         # A task folder made by hand has no wip folder. The user has just answered New WIP,
         # so build it here instead of letting open() fail. Covers both open() calls below.
         os.makedirs(self.selProjScnShotTaskWIPPath, exist_ok = True)
 
-        newWipName = (self.selShot + "_" + self.selTask + "_" + self.subDict[self.selProjWipCode] + "_v0000" + wipExtension)
+        newWipName = (shotName + "_" + taskName + "_" + self.subDict[self.selProjWipCode] + "_v0000" + wipExtension)
         self.printEcho(newWipName)
 
         println()
@@ -3655,12 +3871,17 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.updateCurrentOpeningLocationPath()
         """
 
+        # The New WIP dialog is one shared instance and its two buttons are connected once at
+        # startup in initializeNewWIPDialogWindow, so the tag cannot arrive by lambda. It is
+        # stashed by listWidget_3C_action, the only def that opens the dialog.
+        taskParentPath, shotName, taskName = self.taskLevelConvert(self.newWipInType)
+
         self.printEcho('bigKeeperCacheFolderPath :{}'.format(bigKeeperCacheFolderPath))
-        self.selProjScnShotTaskWIPPath = os.path.join(self.selProjScnShotTaskPath, self.selTask, self.subDict[self.selProjWipCode])
+        self.selProjScnShotTaskWIPPath = os.path.join(taskParentPath, taskName, self.subDict[self.selProjWipCode])
         self.printEcho(self.selProjScnShotTaskWIPPath)
 
 
-        newWipName = (self.selShot + "_" + self.selTask + "_" + self.subDict[self.selProjWipCode] + "_v0000" + wipExtension)
+        newWipName = (shotName + "_" + taskName + "_" + self.subDict[self.selProjWipCode] + "_v0000" + wipExtension)
         self.printEcho(newWipName)
         saveName = os.path.join(self.selProjScnShotTaskWIPPath,newWipName)
         self.printEcho(saveName)
@@ -3672,7 +3893,42 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
         self.updateCurrentOpeningLocationPath()
 
-        QMessageBox.information(self, 'New Wip with Used Current', 'New WIP in new task < {} > created.'.format(self.selTask))
+        QMessageBox.information(self, 'New Wip with Used Current', 'New WIP in new task < {} > created.'.format(taskName))
+
+
+    def nukeScriptOpenTolerant(self, inFullPath):
+        println('\ndef >>>>> nukeScriptOpenTolerant')
+
+        # nuke.scriptOpen raises RuntimeError for two very different things, and the bare call
+        # this def replaces let both of them kill the rest of the open handler : the freeze
+        # callback, the Scene Update check and the tab switch all stopped running.
+        #   - The script IS loaded, but something in it complained. A knob value the current
+        #     colour config no longer offers ( a Nuke 15 script carrying < display ACES > opened
+        #     in Nuke 17 ), a missing gizmo, an unknown node. Nuke leaves that knob at its
+        #     default value and the script is open, so the caller carries on.
+        #   - The script is NOT loaded at all. nuke.root() is then still the previous script and
+        #     the caller must stop, or it would run its follow up steps on the wrong script.
+        # Comparing the root name against the path asked for is what tells the two apart.
+        try:
+            nuke.scriptOpen(inFullPath)
+            errorText = ''
+        except RuntimeError as theError:
+            errorText = str(theError)
+
+        openedPath = nuke.root().name()
+        self.printEcho('asked for : {}'.format(inFullPath))
+        self.printEcho('opened    : {}'.format(openedPath))
+
+        # nuke.root().name() is forward slashed, os.path.join builds backslashes on Windows.
+        isOpened = os.path.normpath(openedPath).lower() == os.path.normpath(inFullPath).lower()
+
+        if errorText != '' and isOpened == True:
+            QMessageBox.warning(self, 'Ooops!', '{}\n\nis open, but Nuke reported :\n\n{}\n\nThe knobs named above are left at their default value.\nSaving a new version writes the corrected value back.'.format(inFullPath, errorText))
+
+        elif errorText != '':
+            QMessageBox.warning(self, 'Ooops!', '{}\n\nis NOT opened. Nuke reported :\n\n{}'.format(inFullPath, errorText))
+
+        return isOpened
 
 
     def pretendCloseNukeScript(self):
@@ -3692,6 +3948,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
         '''
 
+    '''
     def checkCurrentUnsaveStatus(self):
         println('\ndef >>>>> checkCurrentUnsaveStatus')
         if in_nuke:
@@ -3708,6 +3965,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
                 nuke.scriptOpen(os.path.join(self.selProjScnShotTaskWIPPath, self.listFile[-1]))
                 nuke.onScriptLoad(self.nukeFileKnobFreezeScriptLoad())
                 #window.close()
+    '''
 
     def updateCurrentOpeningLocationPath(self):
         println('\ndef >>>>> updateCurrentOpeningLocationPath')
@@ -3861,19 +4119,20 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
     def shotAction1Action(self, inType):
         println('\ndef >>>>> shotAction1Action')
 
-        if inType == 'typeScene':
-            if self.listWidget_3.currentRow() > -1:
-                self.printEcho(self.selTask)
-                self.listWidget_3C_action(self.selTask)
-            else:
-                QMessageBox.information(self, 'message', "no task is selected.")
+        # Both arms used to differ only by the listWidget, and both handed the shared selTask
+        # down to listWidget_3C_action. The task name now comes from this tab's own state.
+        taskParentPath, shotName, taskName = self.taskLevelConvert(inType)
 
+        if inType == 'typeScene':
+            listWidgetTask = self.listWidget_3
         elif inType == 'typeLib':
-            if self.listWidget_AssetTask.currentRow() > -1:
-                self.printEcho(self.selTask)
-                self.listWidget_3C_action(self.selTask)
-            else:
-                QMessageBox.information(self, 'message', "no task is selected.")
+            listWidgetTask = self.listWidget_AssetTask
+
+        if listWidgetTask.currentRow() > -1:
+            self.printEcho(taskName)
+            self.listWidget_3C_action(taskName, inType)
+        else:
+            QMessageBox.information(self, 'message', "no task is selected.")
 
     def shotAction2Action(self):
         println('\ndef >>>>> shotAction2Action')
@@ -4959,7 +5218,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             baseColor = 2060476415
         elif inTypeForColor == 'Prerend':
             baseColor = 2060476415
-        elif inTypeForColor == 'LightPublish':
+        elif inTypeForColor == lightQCType:
             baseColor = 2320101951
             marginHeight = 38
             marginWidth = 90
@@ -5064,8 +5323,8 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
 
 
-    def lightPublishBornBackdrop(self):
-        println('\ndef >>>>> lightPublishBornBackdrop')
+    def lightQCBornBackdrop(self):
+        println('\ndef >>>>> lightQCBornBackdrop')
 
         isAlreadyExist = False
 
@@ -5073,7 +5332,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         for checkNode in allNodes:
             self.printEcho(checkNode['name'].value())
 
-            if checkNode['name'].value() == 'bigK_lightPublish':
+            if checkNode['name'].value() == lightQCBackdropName:
                 isAlreadyExist = True
 
         if not isAlreadyExist:
@@ -5086,20 +5345,20 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
             self.printEcho(allSelNodesName)
 
-            backdropLabel= 'bigK_LightPublish'
-            inType = 'LightPublish'
-            Prefix = 'bigK_lightPublish'
+            backdropLabel = lightQCBackdropName
+            inType = lightQCType
+            Prefix = lightQCBackdropName
 
             self.nukeBornBackdrop(allSelNodesName, backdropLabel, inType, Prefix)
 
         else:
 
-            dupMessage = '\n\nBackdrop Node Name <{}> is already existed\n\n'.format('bigK_lightPublish')
+            dupMessage = '\n\nBackdrop Node Name <{}> is already existed\n\n'.format(lightQCBackdropName)
             QMessageBox.information(self, 'message', dupMessage)
 
 
-    def lightPublishCopyAction(self):
-        println('\ndef >>>>> lightPublishCopyAction')
+    def lightQCCopyAction(self):
+        println('\ndef >>>>> lightQCCopyAction')
 
         def findSeqBaseName(inReadNodeFilePath):
             #println('\ndef >>>>> findSeqBaseName')
@@ -5115,7 +5374,14 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             #println('def findSeqBaseName <<<<<')
             return seqBaseName
 
-        targetBackdrop = nuke.toNode('bigK_lightPublish')
+        targetBackdrop = nuke.toNode(lightQCBackdropName)
+
+        # Scripts made before the LightQC rename carry a bigK_lightPublish backdrop, which this
+        # no longer finds. The old backdrop is not converted -- the artist rebuilds it.
+        if targetBackdrop is None:
+            QMessageBox.warning(self, 'Ooops!', '\n\nBackdrop <{}> is not found.\n\nIf this script still carries an old <bigK_lightPublish> backdrop, delete it and re-build with the current LightQC Backdrop button.\n\n'.format(lightQCBackdropName))
+            return
+
         nodesInBackdrop = targetBackdrop.getNodes()
 
 
@@ -5170,14 +5436,14 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             originalVerNumber = os.path.normpath(sourcePath).split(os.path.sep)[12]
             self.printEcho(originalVerNumber)
 
-            #println(os.path.join(currentTaskPath, 'publishedLightPreRend', (str(currentVerNumber).zfill(4)), os.path.basename(sourceReadNodeFilePath.parent)))
-            destinationVerPath = os.path.join(currentTaskPath, 'publishedLightPreRend', (str(originalVerNumber).zfill(4)), os.path.basename(sourceReadNodeFilePath.parent))
+            #println(os.path.join(currentTaskPath, lightQCPublishFolderName, (str(currentVerNumber).zfill(4)), os.path.basename(sourceReadNodeFilePath.parent)))
+            destinationVerPath = os.path.join(currentTaskPath, lightQCPublishFolderName, (str(originalVerNumber).zfill(4)), os.path.basename(sourceReadNodeFilePath.parent))
 
 
             listFiles = os.listdir(sourceReadNodeFilePath.parent)
 
 
-            #for copy to under according to Lightpublish.nk ver Number
+            #for copy to under according to LightQC .nk ver Number
             targetFiles = []
 
             for file in listFiles:
