@@ -1,4 +1,4 @@
-winTitlePrefix = 'BigKeeper_20261004a'
+winTitlePrefix = 'BigKeeper_20261016F'
 #winTitlePrefix = 'BigKeeper_20250810a - For Release'
 #This have to match the line in the launcher.bat lines, to keep launcher singleton:
 #taskkill /FI "WINDOWTITLE eq BigKeeper_*" /F
@@ -158,7 +158,7 @@ sys.path.append(r'N:\bpPipeline\bigKeeperPy\py\externalPyModule')
 
 # To initiate current software environment variables
 externalToolPath = r'N:\bpPipeline\bigKeeperPy\py\externalTool'
-rvPath = r'C:\Program Files\Shotgun\RV-2021.0.0\bin\rv.exe'
+#rvPath = r'C:\Program Files\Shotgun\RV-2021.0.0\bin\rv.exe'
 rvTemplate = r'N:\bpPipeline\rv\_bigkeeperPyData\rv.template'
 
 # robocopy flags shared by every template-tree create.
@@ -179,6 +179,12 @@ pinnedProjectNames = ('BigAssetCollections',)
 visualBoardExtension = '.pur'
 # The PureRef file the Visual Board buttons open. The board is named after the folder it sits
 # in, and it is opened through its Windows file association.
+
+rvSessionStorageRootPath = r'K:\z_RvSession'
+# Every RV session (.rv) lives here, mirroring the project tree under its own project folder :
+# K:\z_RvSession\ChanFilm\scenes\Sc01TramSeq\CG0010\components\comp\output\v0005.rv. The folder
+# RV reviews on the job drive keeps a Windows shortcut, v0005.rv.lnk, pointing back here. Same as
+# the Visual Board, nothing checks that K: is mapped.
 
 visualBoardStorageRootPath = r'K:\z_VisualBoard'
 # Every Visual Board lives here, mirroring the project tree under its own project folder :
@@ -491,6 +497,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
         self.pushButton_commentClient.clicked.connect(self.launchCommentClient)
         self.pushButton_commentClient.setText(self.iconPathRead(pathOfIconPathsStudio, 'COMMENTCLIENT', 'label'))
+        self.pushButton_commentInternal.clicked.connect(self.launchCommentInternal)
 
         self.pushButton_miscCookbook.clicked.connect(self.launchMiscCookbook)
         self.pushButton_miscCookbook.setText(self.iconPathRead(pathOfIconPathsStudio, 'LEARNING', 'label'))
@@ -538,10 +545,10 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         self.wrongFormatUi.pushButton_exec.clicked.connect(lambda : self.listWidget_A_action(self.wrongFormatUi.listWidget.currentItem()))
         self.wrongFormatUi.setWindowTitle('Edit task in Wrong-Format-Projects')
 
-        self.compPreviousVerUi = subListView(parent = self)
-        self.compPreviousVerUi.listWidget.itemDoubleClicked.connect(self.shotAction3Action)
-        self.compPreviousVerUi.pushButton_exec.clicked.connect(lambda : self.shotAction3Action(self.compPreviousVerUi.listWidget.currentItem()))
-        self.compPreviousVerUi.setWindowTitle('RV Review Comp Previous ver')
+        self.rvPreviousVersionUi = subListView(parent = self)
+        self.rvPreviousVersionUi.listWidget.itemDoubleClicked.connect(lambda item : self.rvReviewAction(self.rvPreviousVersionInType, item.data(Qt.UserRole)))
+        self.rvPreviousVersionUi.pushButton_exec.clicked.connect(lambda : self.rvReviewAction(self.rvPreviousVersionInType, self.rvPreviousVersionUi.listWidget.currentItem().data(Qt.UserRole)))
+        self.rvPreviousVersionUi.setWindowTitle('RV Review Previous ver')
 
         #self.prerendKeywordListUi  = prerendKeywordListView(parent = self)
 
@@ -697,8 +704,8 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         self.shotTaskTypeAction = QAction('Task Type', self)
         self.shotAction1 = QAction('Edit Shot Task', self)
         #self.shotAction2 = QAction('RV latest Comp Output', self)
-        self.shotAction3 = QAction('RV Build & Review Comp Latest ver', self)
-        self.shotAction4 = QAction('RV Review Comp Previous ver', self)
+        self.shotAction3 = QAction('RV Build & Review Latest ver', self)
+        self.shotAction4 = QAction('RV Review Previous ver', self)
         self.shotActionMenu.addAction(self.shotTaskTypeAction)
         self.shotActionMenu.addSeparator()
         self.shotActionMenu.addAction(self.shotAction1)
@@ -709,23 +716,29 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         # 'Task Type' above is only a placeholder, aboutToShow writes the row before it is seen.
         self.shotActionMenu.aboutToShow.connect(lambda : self.taskTypeMenuRefresh('typeScene'))
         self.shotTaskTypeAction.triggered.connect(lambda : self.taskTypeChangeAction('typeScene'))
-        self.shotAction1.triggered.connect(lambda : self.shotAction1Action('typeScene'))
+        self.shotAction1.triggered.connect(lambda : self.editTaskAction('typeScene'))
         #self.shotAction2.triggered.connect(self.shotAction2Action)
-        self.shotAction3.triggered.connect(self.shotAction3Action)
-        self.shotAction4.triggered.connect(self.shotAction4Action)
+        self.shotAction3.triggered.connect(lambda : self.rvReviewAction('typeScene', None))
+        self.shotAction4.triggered.connect(lambda : self.rvPreviousVersionShow('typeScene'))
 
         self.pushButton_assetAction.setText('assetActionMenu')
         self.pushButton_assetAction.setEnabled(False)
         self.assetActionMenu = QMenu(self.pushButton_assetAction)
         self.assetTaskTypeAction = QAction('Task Type', self)
         self.assetAction1 = QAction('Edit Asset Task', self)
+        self.assetAction3 = QAction('RV Build & Review Latest ver', self)
+        self.assetAction4 = QAction('RV Review Previous ver', self)
         self.assetActionMenu.addAction(self.assetTaskTypeAction)
         self.assetActionMenu.addSeparator()
         self.assetActionMenu.addAction(self.assetAction1)
+        self.assetActionMenu.addAction(self.assetAction3)
+        self.assetActionMenu.addAction(self.assetAction4)
         self.pushButton_assetAction.setMenu(self.assetActionMenu)
         self.assetActionMenu.aboutToShow.connect(lambda : self.taskTypeMenuRefresh('typeLib'))
         self.assetTaskTypeAction.triggered.connect(lambda : self.taskTypeChangeAction('typeLib'))
-        self.assetAction1.triggered.connect(lambda : self.shotAction1Action('typeLib'))
+        self.assetAction1.triggered.connect(lambda : self.editTaskAction('typeLib'))
+        self.assetAction3.triggered.connect(lambda : self.rvReviewAction('typeLib', None))
+        self.assetAction4.triggered.connect(lambda : self.rvPreviousVersionShow('typeLib'))
 
         # set the only active tab in related software.
         tabCount = self.tabWidget_2.count()
@@ -767,11 +780,6 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         if in_blender:
             self.setWindowFlags(Qt.WindowStaysOnTopHint)
 
-        #if not in_python and not in_nuke and not in_houdini and not is_iDriveDeveloper:
-        if not in_python:
-            #self.pushButton_shotAction.setEnabled(False)
-            self.shotAction3.setDisabled(True)
-            self.shotAction4.setDisabled(True)
 
 
         if in_houdini:
@@ -779,7 +787,6 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.setStyleSheet(hou.qt.styleSheet())
 
         self.initDummy()
-
 
     def initDummy(self):
         '''
@@ -998,6 +1005,21 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         os.startfile(os.path.normpath(os.path.join(self.selProjRootPath, 'Comment')))
 
 
+    def launchCommentInternal(self):
+        println('\ndef >>>>> launchCommentInternal')
+
+        # The internal comment folder sits in the RV storage tree on K:, where createRvFile writes
+        # its comment shortcuts, so every office opens the same one. It is made on the first
+        # press, the way the Daily folder is.
+        commentPath = os.path.join(rvSessionStorageRootPath, self.selProj, 'comment')
+
+        if not os.path.isdir(commentPath):
+            os.makedirs(commentPath)
+            QMessageBox.information(self, 'Comment Folder not found', 'No existing internal Comment folder.\nFolder is created: {}'.format(commentPath))
+
+        os.startfile(commentPath)
+
+
     def launchRoughcut(self):
         println('\ndef >>>>> launchRoughcut')
 
@@ -1081,6 +1103,15 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         theCmd = 'start {}'.format(os.path.join(self.envRead('HOUDINI', 'batPath'), 'studioEnv.bat'))
         println(theCmd)
         os.system(theCmd)
+
+    def launchStudioEnvRv(self, inFilePath):
+        println('\ndef >>>>> launchStudioEnvRv')
+
+        # Same studioEnv.bat layout as Maya and Nuke, so a special environment can be set in the
+        # bat. The bat hands inFilePath, an .rv or a folder, on to rv.exe through %*.
+        theBat = os.path.join(self.envRead('RV', 'batPath'), 'studioEnv.bat')
+        println(theBat)
+        subprocess.Popen([theBat, inFilePath])
 
     def launchMayaLegacySelection(self):
         theCmd = 'start {}'.format(os.path.join(self.envRead('MAYA', 'batPath'), 'studioEnv_LegacySelDisplay.bat'))
@@ -1293,6 +1324,10 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.assetLocationPath = cnvtSelProjScnPath
             self.lineEdit_assetLocation.setText(self.assetLocationPath)
 
+        # A board or a session made at another office arrives through K:'s sync, but its
+        # shortcut on this office's job drive does not. Every click puts back what is missing.
+        self.storageShortcutRefresh(inType)
+
 
 
     def comboBoxAction2(self, item):
@@ -1450,6 +1485,10 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.pushButton_assetAction2.setEnabled(False)
             self.pushButton_assetAction3.setEnabled(False)
 
+        # A board or a session made at another office arrives through K:'s sync, but its
+        # shortcut on this office's job drive does not. Every click puts back what is missing.
+        self.storageShortcutRefresh(inType)
+
 
 
 
@@ -1502,6 +1541,10 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.pushButton_assetAction.setEnabled(False)
             self.pushButton_assetAction2.setEnabled(False)
             self.pushButton_assetAction3.setEnabled(False)
+
+        # A board or a session made at another office arrives through K:'s sync, but its
+        # shortcut on this office's job drive does not. Every click puts back what is missing.
+        self.storageShortcutRefresh(inType)
 
 
     def listWidget_3C_action(self, item, inType):
@@ -2841,6 +2884,10 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.listFile = self.listOutFilesInFolder(True)
             self.listFile.sort()
 
+        # A board or a session made at another office arrives through K:'s sync, but its
+        # shortcut on this office's job drive does not. Every click puts back what is missing.
+        self.storageShortcutRefresh(inType)
+
         #return item
 
     def myAction1(self):
@@ -2973,17 +3020,68 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
                                     'The old Visual Board could not be deleted :\n\n{}\n\n{}\n\nThe board opens from its new home anyway, and BigKeeper tries this again the next time you open it.'.format(
                                         originalFullPath, deleteProblem))
 
-        # Rebuilt whenever it is missing, so a board moved by hand still gets one back. Same
-        # Shortcut.exe the RV comment folder uses :
-        # Shortcut.exe /f:"<the .lnk>" /a:c /t:"<what it points at>"
+        # Rebuilt whenever it is missing, so a board moved by hand still gets one back.
         if not os.path.isfile(shortcutFullPath):
-            shortcutExecutablePath = os.path.normpath(os.path.join(externalToolPath, 'shortCut', 'Shortcut.exe'))
-            shortcutCommand = shortcutExecutablePath + ' /f:"' + shortcutFullPath + '" /a:c /t:"' + storageFullPath + '"'
-            self.printEcho('shortcutCommand :' + shortcutCommand)
-            os.system(shortcutCommand)
+            self.shortcutCreate(shortcutFullPath, storageFullPath)
 
         # .pur opens through its Windows file association.
         os.startfile(storageFullPath)
+
+
+    def shortcutCreate(self, inShortcutFullPath, inTargetFullPath):
+        println('\ndef >>>>> shortcutCreate')
+
+        # The one place a Windows shortcut is made : the Visual Board, the RV session, the RV
+        # comment folder and storageShortcutFolderRefresh all come here. Both paths are
+        # normalised, as the comment folder always did, because the RV paths arrive with forward
+        # slashes. Shortcut.exe is a console program : CREATE_NO_WINDOW keeps its black window
+        # from flashing, which matters now that a list click can make several shortcuts at once.
+        # Shortcut.exe /f:"<the .lnk>" /a:c /t:"<what it points at>"
+        shortcutExecutablePath = os.path.normpath(os.path.join(externalToolPath, 'shortCut', 'Shortcut.exe'))
+        shortcutCommand = shortcutExecutablePath + ' /f:"' + os.path.normpath(inShortcutFullPath) + '" /a:c /t:"' + os.path.normpath(inTargetFullPath) + '"'
+        self.printEcho('shortcutCommand :' + shortcutCommand)
+        subprocess.run(shortcutCommand, creationflags = subprocess.CREATE_NO_WINDOW)
+
+    def storageShortcutRefresh(self, inType):
+        println('\ndef >>>>> storageShortcutRefresh')
+
+        # Called at the end of every list click, on both tabs. taskLocationPathRead is the folder
+        # just clicked : the scenes or lib root, a sequence, a shot, or a task. Its Visual Board
+        # is checked at every level. At a task level whose Task Type rvReviewFolderPreset.txt
+        # pairs with a folder, that review folder's RV sessions are checked too. A folder above
+        # the task level has no taskType.txt, so taskTypeRead gives '' and the RV half is skipped.
+        jobFolderPath = self.taskLocationPathRead(inType)
+        self.storageShortcutFolderRefresh(jobFolderPath, visualBoardStorageRootPath, visualBoardExtension)
+
+        taskType = self.taskTypeRead(jobFolderPath)
+
+        if taskType != '':
+            rvReviewFolder = self.rvReviewFolderRead(taskType)
+            if rvReviewFolder != '':
+                self.storageShortcutFolderRefresh(os.path.join(jobFolderPath, rvReviewFolder), rvSessionStorageRootPath, '.rv')
+
+    def storageShortcutFolderRefresh(self, inJobFolderPath, inStorageRootPath, inExtension):
+        println('\ndef >>>>> storageShortcutFolderRefresh')
+
+        # The storage folder mirrors inJobFolderPath under its own project folder, the same rule
+        # visualBoardAction and rvReviewAction use. Every inExtension file in it gets a
+        # <name>.lnk in inJobFolderPath when that shortcut is missing, whatever the job folder
+        # holds : a missing version folder is for the user to notice, not for this to judge.
+        # Only a job folder that is not there at all is skipped, so no click ever creates a
+        # folder on the job drive. An unmapped K: reads as no storage folder, nothing happens.
+        storageFolderPath = os.path.join(inStorageRootPath, self.selProj, os.path.relpath(inJobFolderPath, self.subDict[self.selProjPath]))
+        self.printEcho(storageFolderPath)
+
+        if not os.path.isdir(storageFolderPath) or not os.path.isdir(inJobFolderPath):
+            return
+
+        for eachName in os.listdir(storageFolderPath):
+            storageFullPath = os.path.join(storageFolderPath, eachName)
+            shortcutFullPath = os.path.join(inJobFolderPath, eachName + '.lnk')
+
+            if eachName.lower().endswith(inExtension) and os.path.isfile(storageFullPath) and not os.path.isfile(shortcutFullPath):
+                self.shortcutCreate(shortcutFullPath, storageFullPath)
+                println('Shortcut made : {}    >>>    {}'.format(shortcutFullPath, storageFullPath))
 
     def openCurrentOpeningLocationPath(self):
         println('\ndef >>>>> openCurrentOpeningLocationPath')
@@ -3269,6 +3367,30 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         return taskLocationPath
 
 
+    def rvReviewFolderRead(self, inTaskType):
+        println('\ndef >>>>> rvReviewFolderRead')
+
+        # rvReviewFolderPreset.txt in the project work folder pairs a Task Type with the folder
+        # under the task that RV reviews, one <taskType>|<folder> per line, e.g. comp|output.
+        # An empty string means this Task Type has no RV review, and an older project without
+        # the file reads the same way. Both leave the RV rows disabled.
+        rvReviewFolderPresetFullName = os.path.join(self.subDict[self.selProjPath], 'rvReviewFolderPreset.txt')
+        self.printEcho(rvReviewFolderPresetFullName)
+
+        if not os.path.isfile(rvReviewFolderPresetFullName):
+            return ''
+
+        with open(rvReviewFolderPresetFullName) as file:
+            contents = file.readlines()
+
+        for eachLine in contents:
+            eachPair = eachLine.replace('\n', "").split('|')
+            if eachPair[0] == inTaskType:
+                return eachPair[1]
+
+        return ''
+
+
     def taskTypeMenuRefresh(self, inType):
         println('\ndef >>>>> taskTypeMenuRefresh')
 
@@ -3279,15 +3401,27 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
         if taskType == '':
             rowText = '== Create taskType=='
+            rvReviewFolder = ''
         else:
             rowText = 'Task Type :  ' + taskType
+            rvReviewFolder = self.rvReviewFolderRead(taskType)
 
         self.printEcho(rowText)
 
+        # The two RV rows open only in standalone python, and only for a Task Type that
+        # rvReviewFolderPreset.txt pairs with a folder. Decided here and nowhere else : this runs
+        # before every showing, so a setting made once in __init__ would be overridden.
+        # in_python is None outside standalone, hence == True rather than the bare name.
+        rvEnabled = in_python == True and rvReviewFolder != ''
+
         if inType == 'typeScene':
             self.shotTaskTypeAction.setText(rowText)
+            self.shotAction3.setEnabled(rvEnabled)
+            self.shotAction4.setEnabled(rvEnabled)
         elif inType == 'typeLib':
             self.assetTaskTypeAction.setText(rowText)
+            self.assetAction3.setEnabled(rvEnabled)
+            self.assetAction4.setEnabled(rvEnabled)
 
 
     def taskTypeChangeAction(self, inType):
@@ -4121,14 +4255,14 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             self.printEcho(listSeq)
             if len(listSeq) > 0:
                 self.printEcho(listSeq[-1])
-                subprocess.Popen([rvPath, listSeq[-1]])
+                self.launchStudioEnvRv(listSeq[-1])
             else:
                 QMessageBox.information(self, 'message', r'No folder in ...\comp\output')
         else:
             QMessageBox.information(self, 'message', "no shot is selected.")
 
-    def shotAction1Action(self, inType):
-        println('\ndef >>>>> shotAction1Action')
+    def editTaskAction(self, inType):
+        println('\ndef >>>>> editTaskAction')
 
         # Both arms used to differ only by the listWidget, and both handed the shared selTask
         # down to listWidget_3C_action. The task name now comes from this tab's own state.
@@ -4149,151 +4283,179 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         println('\ndef >>>>> shotAction2Action')
         self.compLatestRvAction()
 
-    def shotAction4Action(self):
-        println('\ndef >>>>> shotAction4Action')
-        self.compPreviousVerUi.listWidget.clear()
+    def rvReviewPathRead(self, inType):
+        println('\ndef >>>>> rvReviewPathRead')
 
-        if self.listWidget_2.currentRow() > -1:
+        # The folder RV reviews and its mirror in the storage tree, as a plain tuple. The review
+        # folder is no longer hardcoded comp\output : it is the folder rvReviewFolderPreset.txt
+        # pairs with this task's Task Type, and taskTypeMenuRefresh only enables the RV rows when
+        # that pair exists. The storage folder mirrors it under its own project folder, the way
+        # the Visual Board does.
+        taskLocationPath = self.taskLocationPathRead(inType)
+        rvReviewPath = os.path.join(taskLocationPath, self.rvReviewFolderRead(self.taskTypeRead(taskLocationPath)))
+        rvStorageFolderPath = os.path.join(rvSessionStorageRootPath, self.selProj, os.path.relpath(rvReviewPath, self.subDict[self.selProjPath]))
+        self.printEcho(rvReviewPath)
+        self.printEcho(rvStorageFolderPath)
 
-            #listDir = ['v00010', 'v00020']
+        return (rvReviewPath, rvStorageFolderPath)
 
-            # Asked Lik decided only 'comp' task use this general RV preview. Therefore hardcode 'comp' & ' output' for now.
-            self.printEcho(os.path.join(self.selProjScnShotTaskPath, 'comp', 'output'))
-            thePath = os.path.join(self.selProjScnShotTaskPath, 'comp', 'output')
-            listDir = os.listdir(thePath)
-            folderOnlyList = []
-            for i in listDir:
-                self.printEcho(i)
-                self.printEcho(os.path.join(self.selProjScnShotTaskPath, 'comp', 'output', i))
-                if os.path.isdir(os.path.join(self.selProjScnShotTaskPath, 'comp', 'output', i)):
-                    folderOnlyList.append(i)
-            folderOnlyList.sort(reverse=True)
+    def rvPreviousVersionShow(self, inType):
+        println('\ndef >>>>> rvPreviousVersionShow')
+
+        # rvPreviousVersionUi is a single dialog shared by both tabs. Its exec button and double
+        # click are connected once in __init__, so the tab is stashed here for them to read.
+        self.rvPreviousVersionInType = inType
+
+        rvReviewPath, rvStorageFolderPath = self.rvReviewPathRead(inType)
+
+        if not os.path.isdir(rvReviewPath):
+            QMessageBox.information(self, 'message', 'Review folder not found :\n\n{}'.format(rvReviewPath))
+            return
+
+        folderOnlyList = []
+        for i in os.listdir(rvReviewPath):
+            if os.path.isdir(os.path.join(rvReviewPath, i)):
+                folderOnlyList.append(i)
+        folderOnlyList.sort(reverse=True)
+        self.printEcho(folderOnlyList)
+
+        # A version whose .rv is already in the storage tree is marked, so the user knows it opens
+        # at once with no build. The marked text is no longer the folder name, so the folder name
+        # rides in UserRole, which is what __init__ hands to rvReviewAction.
+        self.rvPreviousVersionUi.listWidget.clear()
+        for eachFolder in folderOnlyList:
+            if os.path.isfile(os.path.join(rvStorageFolderPath, eachFolder + '.rv')):
+                displayText = eachFolder + ' - <rv>'
+            else:
+                displayText = eachFolder
+
+            newItem = QListWidgetItem(displayText)
+            newItem.setData(Qt.UserRole, eachFolder)
+            self.rvPreviousVersionUi.listWidget.addItem(newItem)
+
+        # Row 0 picked, so the exec button never runs on no row.
+        self.rvPreviousVersionUi.listWidget.setCurrentRow(0)
+        self.rvPreviousVersionUi.show()
 
 
+    def rvReviewAction(self, inType, inChosenVersion):
+        println('\ndef >>>>> rvReviewAction')
 
-            #self.childUi.show()
-            self.compPreviousVerUi.listWidget.addItems(folderOnlyList)
-            #self.wrongFormatUi.listWidget.itemDoubleClicked.connect(self.listWidget_A_action)
-            #self.compPreviousVerUi.listWidget.itemDoubleClicked.connect(self.speak)
+        # inChosenVersion is None from the menu row, which reviews the latest version, or the
+        # folder name picked in rvPreviousVersionUi.
+        self.printEcho('inChosenVersion : {}'.format(inChosenVersion))
 
-            #self.compPreviousVerUi.listWidget.itemDoubleClicked.connect(self.shotAction3Action)
+        rvReviewPath, rvStorageFolderPath = self.rvReviewPathRead(inType)
 
-            self.compPreviousVerUi.show()
+        if not os.path.isdir(rvReviewPath):
+            QMessageBox.information(self, 'message', 'Review folder not found :\n\n{}'.format(rvReviewPath))
+            return
+
+        # The latest version is the highest of the v#### folders on the job drive and the
+        # v####.rv sessions in the storage tree. An office whose frames have not arrived yet
+        # still opens the newest .rv that K:'s sync brought, and RV itself reports the missing
+        # frames.
+        if inChosenVersion == None:
+            listSeq = []
+            for i in os.listdir(rvReviewPath):
+                if (len(i) <= 5) and (i[0] == 'v') and i[1::].isnumeric() and os.path.isdir(os.path.join(rvReviewPath, i)):
+                    listSeq.append(i)
+
+            if os.path.isdir(rvStorageFolderPath):
+                for i in os.listdir(rvStorageFolderPath):
+                    versionName = i[:-3]
+                    if i.lower().endswith('.rv') and (len(versionName) <= 5) and (versionName[0] == 'v') and versionName[1::].isnumeric() and versionName not in listSeq:
+                        listSeq.append(versionName)
+
+            listSeq.sort()
+            self.printEcho(listSeq)
+
+            if len(listSeq) == 0:
+                QMessageBox.information(self, 'message', 'No v#### folder or .rv in :\n\n{}\n\n{}'.format(rvReviewPath, rvStorageFolderPath))
+                return
+
+            chosenVersion = listSeq[-1]
         else:
-            QMessageBox.information(self, 'message', "no shot is selected.")
+            chosenVersion = inChosenVersion
 
-        return folderOnlyList[2]
+        chosenVersionPath = os.path.join(rvReviewPath, chosenVersion)
+        self.printEcho(chosenVersionPath)
 
+        # The .rv lives in the storage tree. The folder RV reviews on the job drive keeps only
+        # a shortcut beside the version folder : output\v0005.rv.lnk
+        rvFileName = chosenVersion + '.rv'
+        rvStorageFullPath = os.path.join(rvStorageFolderPath, rvFileName)
+        rvOriginalFullPath = os.path.join(rvReviewPath, rvFileName)
+        shortcutFullPath = rvOriginalFullPath + '.lnk'
+        self.printEcho(rvStorageFullPath)
 
-    def shotAction3Action(self, *inItem):
-        println('\ndef >>>>> shotAction3Action')
+        # An .rv built before the storage tree existed is copied there with no question asked :
+        # it is the same session, only somewhere else.
+        if not os.path.isfile(rvStorageFullPath) and os.path.isfile(rvOriginalFullPath):
+            if not os.path.isdir(rvStorageFolderPath):
+                os.makedirs(rvStorageFolderPath)
+            shutil.copy2(rvOriginalFullPath, rvStorageFullPath)
+            println('RV session copied : {}    >>>    {}'.format(rvOriginalFullPath, rvStorageFullPath))
 
-        if len(inItem) == 0:
-            chosenVer = None
-        else:
-            chosenVer = inItem[0].text()
-
-        self.printEcho('chosenVer: ')
-        self.printEcho(chosenVer)
-
-
-        def isExrFormat(inPath):
-            # This function is to limit only activate for EXR format. Due to current ability that other format seems have color issue when create RV session by text pad hacking. Should tackle later.
-            println('\n   def >>>>> checkExrOnly')
-            allFiles = os.listdir(inPath)
-
-            for i in allFiles:
-                if i.split('.')[-1] == 'exr' or i.split('.')[-1] == 'EXR':
-                    self.printEcho(i)
-                    exrFormat = True
-                    self.printEcho(exrFormat)
-                elif i.split('.')[-1] == 'png' or i.split('.')[-1] == 'PNG':
-                    self.printEcho(i)
-                    exrFormat = True
-                    self.printEcho(exrFormat)
-
-                elif i.split('.')[-1] == 'tmp' or i.split('.')[-1] == 'TMP':
-                    self.printEcho(i)
-                    self.printEcho('pass')
-                    pass
-                else:
-                    self.printEcho(i)
-                    exrFormat = False
-                    self.printEcho(exrFormat)
-                    break
-
-            return exrFormat
-
-        self.printEcho(os.path.join(self.selProjScnShotTaskPath, 'comp', 'output'))
-        thePath = os.path.join(self.selProjScnShotTaskPath, 'comp', 'output')
-        if self.listWidget_2.currentRow() > -1:
+        # The copy is in place by now, so the .rv on the job drive goes. One that is open in RV
+        # refuses to be deleted, so it is left where it is and tried again on the next press.
+        if os.path.isfile(rvOriginalFullPath):
             try:
-                folderList = os.listdir(thePath)
-            except:
-                QMessageBox.information(self, 'message', 'Standard "Comp" & "Output" folder not found.')
+                os.remove(rvOriginalFullPath)
+                println('Old RV session deleted : {}'.format(rvOriginalFullPath))
+            except OSError as deleteProblem:
+                QMessageBox.warning(self, 'Ooops!',
+                                    'The old RV session could not be deleted :\n\n{}\n\n{}\n\nThe session opens from its new home anyway, and BigKeeper tries this again the next time you open it.'.format(
+                                        rvOriginalFullPath, deleteProblem))
 
-            self.printEcho(folderList)
+        # An .rv that already exists is opened as it is, never rebuilt.
+        if not os.path.isfile(rvStorageFullPath):
 
-            if chosenVer == None:
-                listSeq = []
-                for i in folderList:
-                    self.printEcho('i : ')
-                    self.printEcho(i)
-                    if (len(i) <= 5) and (i[0] == 'v') and i[1::].isnumeric():
-                        self.printEcho(os.path.join(self.selProjScnShotTaskPath, 'comp', 'output', i))
-                        if os.path.isdir(os.path.join(self.selProjScnShotTaskPath, 'comp', 'output', i)):
-                            listSeq.append(os.path.join(self.selProjScnShotTaskPath, 'comp', 'output', i))
-                            latestVersion = i
-                listSeq.sort()
-                self.printEcho(listSeq)
-                self.printEcho(latestVersion)
-                LatestVerPath = listSeq[-1]
-                verType = 'CompMaster'
+            # Only a v#### folder is built into an .rv session. Anything else, a LayerMask or a
+            # FreeLayerMask folder, is opened in Explorer.
+            if not ((len(chosenVersion) <= 5) and (chosenVersion[0] == 'v') and chosenVersion[1::].isnumeric()):
+                os.startfile(chosenVersionPath)
+                return
+
+            # fps is the third line of the shot's frameRange.txt, the file bigKInfo.currentShotFrameFps
+            # reads. It is read here from the shot picked in the browser, because bigKInfo follows the
+            # script open in the DCC, and os.getcwd() in standalone python. No file, ask the user.
+            componentsPath, shotName, taskName = self.taskLevelConvert(inType)
+            frameRangeFullName = os.path.join(componentsPath, 'frameRange.txt')
+            self.printEcho(frameRangeFullName)
+
+            if os.path.isfile(frameRangeFullName):
+                with open(frameRangeFullName) as file:
+                    fps = float(file.readlines()[2])
             else:
-                latestVersion = chosenVer
-                LatestVerPath = os.path.join(self.selProjScnShotTaskPath, 'comp', 'output', latestVersion)
-                self.printEcho('chosenVer !=, println(LatestVerPath) :')
-                self.printEcho(LatestVerPath)
-                listSeq = [LatestVerPath]
+                fps, ok = QInputDialog.getDouble(self, 'Input fps', 'frameRange.txt not found :\n{}\n\nfps of this review :'.format(frameRangeFullName), 24, 1, 240, 3)
+                if not ok:
+                    return
 
-                if (len(latestVersion) <= 5) and (latestVersion[0] == 'v') and latestVersion[1::].isnumeric():
-                    verType = 'CompMaster'
-                else:
-                    verType = 'LayerMask'
+            self.printEcho('fps : {}'.format(fps))
 
-                self.printEcho(verType)
+            # The storage tree is built as it is used, so every level is made on its first build.
+            if not os.path.isdir(rvStorageFolderPath):
+                os.makedirs(rvStorageFolderPath)
 
-            if len(listSeq) > 0:
+            if not self.createRvFile(chosenVersionPath, chosenVersion, rvStorageFullPath, shotName, fps):
+                return
 
+        # Rebuilt whenever it is missing, so an .rv moved by hand still gets one back.
+        if not os.path.isfile(shortcutFullPath):
+            self.shortcutCreate(shortcutFullPath, rvStorageFullPath)
 
-                SameRvVersionPath = (os.path.join(self.selProjScnShotTaskPath, 'comp', 'output', latestVersion + '.rv'))
-                haveSameRvVersion = os.path.isfile(SameRvVersionPath)
+        self.launchStudioEnvRv(rvStorageFullPath)
 
-                if haveSameRvVersion:
-                    subprocess.Popen([rvPath, SameRvVersionPath])
-
-                else:
-                    if verType == 'CompMaster':
-                        if isExrFormat(LatestVerPath):
-                            self.createRvFile(LatestVerPath, latestVersion)
-                            subprocess.Popen([rvPath, SameRvVersionPath])
-
-                        else:
-                            QMessageBox.information(self, 'message', r'Make Sure all frame are .exr format.')
-                    elif verType == 'LayerMask':
-                        os.startfile(LatestVerPath)
-
-
-            else:
-                QMessageBox.information(self, 'message', r'No folder in ...\comp\output')
-        else:
-            QMessageBox.information(self, 'message', "no shot is selected.")
-
-    def createRvFile(self, inLatestVerPath, inLatestVer):
+    def createRvFile(self, inLatestVerPath, inLatestVer, inRvFullPath, inShotName, inFps):
 
         println('\ndef >>>>> createRvFile')
         self.printEcho(inLatestVerPath)
         self.printEcho(inLatestVer)
+
+        # Returns True once the .rv is written, False when the folder holds no image sequence.
+        # inFps comes from the caller, read from frameRange.txt or asked from the user. The fps
+        # used to come from the bigkframepersecond EXR metadata, which no other format can carry.
 
         def getMetaData():
             self.printEcho('\n   def >>>>> getMetaData')
@@ -4302,12 +4464,15 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
             def getFrames(inPath):
                 self.printEcho('\n       def >>>>> getFrames')
+                # A frame is <name>.<number>.<extension>, whatever the image format. That rule alone
+                # drops Thumbs.db, a .mov, and the .tmp files a render in progress leaves behind.
                 allFiles = os.listdir(inPath)
                 self.printEcho(inPath)
                 onlyFiles = []
                 self.printEcho(allFiles)
                 for i in allFiles:
-                    if os.path.isfile(os.path.join(inPath, i)):
+                    splitName = i.split('.')
+                    if len(splitName) == 3 and splitName[1].isnumeric() and splitName[2].lower() != 'tmp' and os.path.isfile(os.path.join(inPath, i)):
                         onlyFiles.append(i)
                 onlyFiles.sort()
 
@@ -4316,12 +4481,8 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             theFrameList = getFrames(inLatestVerPath)
             self.printEcho('theFrameList : {}'.format(theFrameList))
 
-            # to avoid first frame is .tmp which will fail to read meta data
-            for frame in theFrameList:
-                if frame.split('.')[-1] == 'tmp' or frame.split('.')[-1] == 'TMP':
-                    theFrameList.remove(frame)
-
-            self.printEcho('theFrameList after del tmp check: {}'.format(theFrameList))
+            if len(theFrameList) == 0:
+                return None
 
             FrameStartFullName = theFrameList[0].split('.')
             FrameEndFullName = theFrameList[-1].split('.')
@@ -4355,7 +4516,7 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
 
 
             #externalToolPath = r'N:\BigKeeper\py\externalTool'
-            input_file = os.path.normpath((os.path.join(self.selProjScnShotTaskPath, 'comp', 'output', inLatestVer, theFrameList[0])))
+            input_file = os.path.normpath(os.path.join(inLatestVerPath, theFrameList[0]))
             self.printEcho(input_file)
 
 
@@ -4367,7 +4528,6 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             arg1 = r'-all'
             arg2 = r'-ImageWidth'
             arg3 = r'-ImageHeight'
-            arg4 = r'-Bigkframepersecond'
             arg0 = r'-s2' # s1--tag names instead of descriptions   s2--no extra spaces    s3--values only
 
             self.printEcho('before run')
@@ -4396,11 +4556,6 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             except:
                 metaData.append(240) #make a dramatic wrong, user will be alerted. Will develop to pop up dialog for user input.
 
-            try:
-                metaData.append(round(float(infoDict['Bigkframepersecond']), 3))
-            except:
-                metaData.append(3.000) # make a dramatic wrong, user will be alerted. Will develop to pop up dialog for user input.
-
             metaData.append(rvStringName)
             metaData.append(FrameFirstFrameNo)
             metaData.append(FrameEndFrameNo)
@@ -4422,30 +4577,20 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             println('\n   def >>>>> createShortCut')
             self.printEcho(self.subDict[self.selProjPath])
 
-            targetShortCutPath = os.path.normpath(os.path.join(self.subDict[self.selProjPath], 'comment', folderName))
+            # The comment folder sits in the RV storage tree on K:, so every office gets it through
+            # K:'s sync. The shortcuts in it point at K: too, the same drive letter at every office.
+            targetShortCutPath = os.path.normpath(os.path.join(rvSessionStorageRootPath, self.selProj, 'comment', folderName))
             self.printEcho(targetShortCutPath)
             if not os.path.isdir(targetShortCutPath):
                 os.makedirs(targetShortCutPath)
 
-            exec_command = os.path.normpath(os.path.join(externalToolPath, 'shortCut', 'Shortcut.exe'))
-            #argument_command = ' ' + r'/f:"' + r'D:\toliet\Shortcut\myBNOpic8.lnk' + r'" ' +  r'/a:c ' + r'/t:"' + r'D:\toliet\Shortcut\IMG_1459_BNO_N_U.jpg' + '"'
             linkName = os.path.normpath(os.path.join(targetShortCutPath, str(inShotName + '_' + iniRvVersion))) + r'__shortcut' + r'.lnk'
-            sourceName = os.path.normpath(inRvFullPathName)
-            argument_command = ' ' + r'/f:"' + linkName + r'" ' +  r'/a:c ' + r'/t:"' + sourceName + '"'
-            # sample: Shortcut.exe /f:"D:\toliet\Shortcut\myBNOpic2.lnk" /a:c /t:"D:\toliet\Shortcut\IMG_1459_BNO_N_U.jpg"
-            #cmd = exec_command + " " + r'/f:"D:\toliet\Shortcut\myBNOpic6.lnk" /a:c /t:"D:\toliet\Shortcut\IMG_1459_BNO_N_U.jpg"'
-            cmd = exec_command + argument_command
-            self.printEcho('exec_command :' + exec_command)
-            self.printEcho('cmd :' + cmd)
-
-            #subprocess.Popen([exec_command, linkName, actionMode, sourceName])
-            os.system(cmd)
+            self.shortcutCreate(linkName, inRvFullPathName)
 
 
 
 
         # rvTemplate = r'N:\mnt\job\19901BigPicture_TestProj\_bigkeeperPyData\rv.template'
-        theFile = os.path.join(self.selProjScnShotTaskPath, 'comp', 'output')
 
         with open(rvTemplate) as f:
             data = f.readlines()
@@ -4453,13 +4598,13 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         self.printEcho('***************************************')
 
         MetaData = getMetaData()
-        inWidth = MetaData[0]
-        inHeight = MetaData[1]
-        inFps = MetaData[2]
-        inRvStringName = MetaData[3]
+
+        if MetaData == None:
+            QMessageBox.information(self, 'message', 'No image sequence in :\n\n{}'.format(inLatestVerPath))
+            return False
+
+        inWidth, inHeight, inRvStringName, inFrameFirstFrameNo, inFrameEndFrameNo = MetaData
         RvStringMovie = (str(inLatestVerPath + '/' + inRvStringName).replace("\\", "/"))
-        inFrameFirstFrameNo = MetaData[4]
-        inFrameEndFrameNo = MetaData[5]
         rvTimeLineStart = 1
         rvTimeLineEnd = int(inFrameEndFrameNo) - int(inFrameFirstFrameNo) + 1 + rvTimeLineStart
 
@@ -4502,7 +4647,9 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
             data[line-1] = data[line-1].replace('__<rvTimelineStart>__', str(rvTimeLineStart))
             data[line-1] = data[line-1].replace('__<rvTimelineEnd>__', str(rvTimeLineEnd))
 
-        writePath = str(os.path.join(self.selProjScnShotTaskPath, 'comp', 'output', inLatestVer + '.rv')).replace("\\", "/")
+        # inRvFullPath sits in the storage tree under rvSessionStorageRootPath, worked out by the
+        # caller, which also makes its folder.
+        writePath = inRvFullPath.replace("\\", "/")
         #writePath = writePath.replace("\\", "/")
         self.printEcho('writePath is :' + writePath)
         with open(writePath, 'w') as f:
@@ -4511,7 +4658,9 @@ class BigMainWindow(UiPy.Ui_MainWindow, QMainWindow):
         receivedAnswerFolder = askFolderName()
         if receivedAnswerFolder[1]:
             self.storedAnsweredFolder = receivedAnswerFolder[0]
-            createShortCut(self.storedAnsweredFolder, self.selShot, inLatestVer, writePath)
+            createShortCut(self.storedAnsweredFolder, inShotName, inLatestVer, writePath)
+
+        return True
 
     def findNodeLargestNumber(self, InPrefix, InNodeClassName):
         println('\ndef >>>>> findNodeLargestNumber')
